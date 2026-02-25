@@ -1038,6 +1038,15 @@ Shell::GetResourceLoaderIntercept() {
 ScreenshotData Shell::ScreenshotSync(
     ScreenshotData::ScreenshotType screenshot_type, uint32_t background_color) {
   TRACE_EVENT("clay", "Shell::ScreenshotSync");
+  // Trigger BeginFrame first to submit the latest frame to the Rasterizer.
+  fml::TaskRunner::RunNowOrPostTask(
+      task_runners_.GetUITaskRunner(),
+      fml::MakeCopyable([engine = weak_engine_]() mutable {
+        if (engine) {
+          engine->ForceBeginFrame();
+        }
+      }));
+
   std::future<std::optional<ScreenshotData>> screenshot_future =
       rasterizer_service_.ActWithPromise(
           [screenshot_type, background_color](auto& impl) {
@@ -1050,6 +1059,15 @@ ScreenshotData Shell::ScreenshotSync(
 void Shell::ScreenshotAsync(ScreenshotData::ScreenshotType screenshot_type,
                             uint32_t background_color,
                             std::function<void(ScreenshotData)> callback) {
+  // Trigger BeginFrame first to submit the latest frame to the Rasterizer.
+  fml::TaskRunner::RunNowOrPostTask(
+      task_runners_.GetUITaskRunner(),
+      fml::MakeCopyable([engine = weak_engine_]() mutable {
+        if (engine) {
+          engine->ForceBeginFrame();
+        }
+      }));
+
   rasterizer_service_.Act(
       [screenshot = screenshot, screenshot_type, background_color](auto& impl) {
         if (screenshot->load()) {
