@@ -33,19 +33,6 @@ void PrepareEnvWidthScreenSize(int width, int height, float density,
 }
 }  // namespace
 
-const std::string TemplateRendererEventSimulationProxy::kMousePressed =
-    "mousePressed";
-const std::string TemplateRendererEventSimulationProxy::kMouseMoved =
-    "mouseMoved";
-const std::string TemplateRendererEventSimulationProxy::kMouseReleased =
-    "mouseReleased";
-const std::string TemplateRendererEventSimulationProxy::kMouseWheel =
-    "mouseWheel";
-const std::string TemplateRendererEventSimulationProxy::kMouseLeftButton =
-    "left";
-const std::string TemplateRendererEventSimulationProxy::kMouseRightButton =
-    "right";
-
 LynxTemplateRenderer::LynxTemplateRenderer(
     const LynxTemplateRenderer::Settings& settings,
     tasm::UIDelegate* ui_delegate,
@@ -628,6 +615,38 @@ void LynxTemplateRenderer::UpdateGenericInfoWithUrl(const std::string& url) {
 void LynxTemplateRenderer::ClearGenericInfo(int32_t instance_id) {
   if (instance_id != shell::kUnknownInstanceId) {
     tasm::report::EventTracker::ClearCache(instance_id);
+  }
+}
+
+namespace {
+class CallbackEventSimulationProxy : public pub::LynxEventSimulationProxy {
+ public:
+  CallbackEventSimulationProxy(LynxTemplateRenderer::EmulateTouch_C_Fn cb,
+                               void* ctx)
+      : callback_(cb), context_(ctx) {}
+
+  void EmulateTouch(const std::string& event_type, int x, int y,
+                    const std::string& button, float delta_x, float delta_y,
+                    int modifiers, int click_count) override {
+    if (callback_) {
+      callback_(context_, event_type.c_str(), x, y, button.c_str(), delta_x,
+                delta_y, modifiers, click_count);
+    }
+  }
+
+ private:
+  LynxTemplateRenderer::EmulateTouch_C_Fn callback_;
+  void* context_;
+};
+}  // namespace
+
+void LynxTemplateRenderer::SetTemplateRendererEventSimulationProxy(
+    EmulateTouch_C_Fn callback, void* context) {
+  if (callback) {
+    event_proxy_ =
+        std::make_shared<CallbackEventSimulationProxy>(callback, context);
+  } else {
+    event_proxy_ = nullptr;
   }
 }
 

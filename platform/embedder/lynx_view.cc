@@ -314,3 +314,18 @@ LYNX_EXTERN_C void lynx_view_release(lynx_view_t* view) {
   view->lynx_ui_renderer.reset();
   delete view;
 }
+
+LYNX_EXTERN_C void lynx_view_set_event_simulation_proxy(
+    lynx_view_t* view, lynx_emulate_touch_fn callback, void* context) {
+  view->lynx_template_renderer->SetTemplateRendererEventSimulationProxy(
+      callback, context);
+}
+
+LYNX_EXTERN_C void lynx_view_send_touch_event(lynx_view_t* view,
+                                              const char* name, int32_t id,
+                                              float x, float y, float client_x,
+                                              float client_y, float page_x,
+                                              float page_y) {
+  view->lynx_template_renderer->SendTouchEvent(name, id, x, y, client_x,
+                                               client_y, page_x, page_y);
+}

@@ -26,6 +26,7 @@
 #include "core/shell/lynx_shell_builder.h"
 #include "core/shell/perf_controller_proxy_impl.h"
 #include "core/shell/runtime/bts/lynx_bts_runtime_proxy_impl.h"
+#include "platform/embedder/public/lynx_event_simulation_proxy.h"
 #if ENABLE_INSPECTOR
 #include "devtool/embedder/common/devtools_embedder.h"
 #endif  // ENABLE_INSPECTOR
@@ -78,19 +79,6 @@ class TemplateRendererClient {
                               const std::string& update_flag) {}
   virtual void OnPerformanceEvent(const lepus::Value& event_entry) {}
   virtual void OnTemplateBundleReady(const tasm::LynxTemplateBundle& bundle) {}
-};
-
-class TemplateRendererEventSimulationProxy {
- public:
-  static const std::string kMousePressed;
-  static const std::string kMouseMoved;
-  static const std::string kMouseReleased;
-  static const std::string kMouseWheel;
-  static const std::string kMouseLeftButton;
-  static const std::string kMouseRightButton;
-  virtual void EmulateTouch(const std::string& event_type, int x, int y,
-                            const std::string& button, float delta_x,
-                            float delta_y, int modifiers, int click_count) {}
 };
 
 using TemplateVerification =
@@ -270,9 +258,18 @@ class LynxTemplateRenderer : public devtool::LynxDevToolProxy {
   };
 
   void SetTemplateRendererEventSimulationProxy(
-      TemplateRendererEventSimulationProxy* event_proxy) {
+      std::shared_ptr<pub::LynxEventSimulationProxy> event_proxy) {
     event_proxy_ = event_proxy;
   }
+
+  // C-callback overload for CAPI layer. Wraps the callback into an internal
+  // adapter so CAPI .cc never references pub/ C++ types.
+  using EmulateTouch_C_Fn = void (*)(void* context, const char* event_type,
+                                     int x, int y, const char* button,
+                                     float delta_x, float delta_y,
+                                     int modifiers, int click_count);
+  void SetTemplateRendererEventSimulationProxy(EmulateTouch_C_Fn callback,
+                                               void* context);
 
  protected:
   std::vector<uint8_t> LoadJSSource(const std::string& url);
@@ -298,7 +295,7 @@ class LynxTemplateRenderer : public devtool::LynxDevToolProxy {
 #if ENABLE_INSPECTOR
   std::unique_ptr<devtool::DevtoolsEmbedder> devtools_;
 #endif  // ENABLE_INSPECTOR
-  TemplateRendererEventSimulationProxy* event_proxy_{nullptr};
+  std::shared_ptr<pub::LynxEventSimulationProxy> event_proxy_ = nullptr;
   devtool::LynxInspectorOwner* inspector_owner_ = nullptr;
 };
 
