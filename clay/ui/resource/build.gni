@@ -17,6 +17,8 @@ ui_resource_sources = [
   "image_manager.h",
   "image_resource_fetcher.cc",
   "image_resource_fetcher.h",
+  "zip_helper.cc",
+  "zip_helper.h",
 ]
 
 if (enable_skity) {

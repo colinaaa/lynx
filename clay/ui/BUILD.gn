@@ -82,6 +82,8 @@ source_set("ui") {
     "../common/graphics",
     "../fml:fml",
     "../shell/platform/common:common_cpp_input",
+    "//third_party/zlib",
+    "//third_party/zlib:minizip",
   ]
 
   public_deps = [

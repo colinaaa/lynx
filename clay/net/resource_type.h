@@ -33,12 +33,13 @@ enum class ResourceType : int8_t {
   kFont,
   kLottie,
   kVideo,
+  kAlphaVideo,
   kSvg,
   kTemplate,
   kLynxCoreJs,
   kDynamicComponent,
   kI18nText,
-  kExternalJs
+  kExternalJs,
 };
 
 }  // namespace clay
