@@ -4,6 +4,7 @@
 
 #import <Lynx/JSModule.h>
 #import <Lynx/LynxDebugger+Internal.h>
+#import <Lynx/LynxEnv+Internal.h>
 #import <Lynx/LynxError.h>
 #import <Lynx/LynxEventReporter.h>
 #import <Lynx/LynxFontFaceManager.h>
@@ -34,7 +35,6 @@
 #import "LynxEngine.h"
 #import "LynxEnginePool.h"
 #import "LynxEngineProxy+Native.h"
-#import "LynxEnv+Internal.h"
 #import "LynxEventReporterUtils.h"
 #import "LynxExposureModule.h"
 #import "LynxFetchModule.h"

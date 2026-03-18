@@ -94,7 +94,7 @@ TEST_F(WorkletAPITest, TestLepusLynxTriggerLepusBridge) {
 
   lepus::BytecodeGenerator::GenerateBytecode(ctx_->GetMTSContext(), js_source,
                                              "");
-  ctx_->Execute();
+  ctx_->Execute(nullptr);
 
   EXPECT_EQ(delegate_->DumpDelegate(), "TriggerLepusMethodAsync\n");
 }
@@ -115,7 +115,7 @@ TEST_F(WorkletAPITest, TestLepusLynxSetTimeoutCrash) {
 
   lepus::BytecodeGenerator::GenerateBytecode(ctx_->GetMTSContext(), js_source,
                                              "");
-  ctx_->Execute();
+  ctx_->Execute(nullptr);
 
   // sleep one second such that when exec loop.RunExpiredTasksNow(), the
   // timeout task can be executed.
@@ -136,7 +136,7 @@ TEST_F(WorkletAPITest, TestLepusLynxTriggerLepusBridgeSync) {
 
   lepus::BytecodeGenerator::GenerateBytecode(ctx_->GetMTSContext(), js_source,
                                              "");
-  ctx_->Execute();
+  ctx_->Execute(nullptr);
 
   EXPECT_EQ(delegate_->DumpDelegate(), "TriggerLepusMethod\n");
 }
@@ -202,7 +202,7 @@ TEST_F(WorkletAPITest, TestLepusLynxSetTimeout) {
   lynx::fml::MessageLoop::EnsureInitializedForCurrentThread();
   lepus::BytecodeGenerator::GenerateBytecode(ctx_->GetMTSContext(), js_source,
                                              "");
-  ctx_->Execute();
+  ctx_->Execute(nullptr);
 
   auto* lynx = static_cast<worklet::NapiLoaderUI*>(
                    tasm_->FindEntry(tasm::DEFAULT_ENTRY_NAME)
@@ -235,7 +235,7 @@ TEST_F(WorkletAPITest, TestLepusLynxClearTimeout) {
   lynx::fml::MessageLoop::EnsureInitializedForCurrentThread();
   lepus::BytecodeGenerator::GenerateBytecode(ctx_->GetMTSContext(), js_source,
                                              "");
-  ctx_->Execute();
+  ctx_->Execute(nullptr);
 
   auto* lynx = static_cast<worklet::NapiLoaderUI*>(
                    tasm_->FindEntry(tasm::DEFAULT_ENTRY_NAME)
@@ -252,7 +252,7 @@ TEST_F(WorkletAPITest, TestLepusLynxSetInterval) {
   lynx::fml::MessageLoop::EnsureInitializedForCurrentThread();
   lepus::BytecodeGenerator::GenerateBytecode(ctx_->GetMTSContext(), js_source,
                                              "");
-  ctx_->Execute();
+  ctx_->Execute(nullptr);
 
   auto* lynx = static_cast<worklet::NapiLoaderUI*>(
                    tasm_->FindEntry(tasm::DEFAULT_ENTRY_NAME)
@@ -270,7 +270,7 @@ TEST_F(WorkletAPITest, TestLepusLynxClearInterval) {
   lynx::fml::MessageLoop::EnsureInitializedForCurrentThread();
   lepus::BytecodeGenerator::GenerateBytecode(ctx_->GetMTSContext(), js_source,
                                              "");
-  ctx_->Execute();
+  ctx_->Execute(nullptr);
 
   auto* lynx = static_cast<worklet::NapiLoaderUI*>(
                    tasm_->FindEntry(tasm::DEFAULT_ENTRY_NAME)

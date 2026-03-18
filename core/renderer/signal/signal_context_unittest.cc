@@ -124,11 +124,11 @@ bool BaseSignalTest::Execute(lepus::Context* ctx) {
   }
 
   if (ctx->IsLepusNGContext()) {
-    return ctx->Execute();
+    return ctx->Execute(nullptr);
   } else {
     auto vm_ctx = lepus::Context::ToVMContext(ctx);
     vm_ctx->heap_ = lepus::Heap();
-    return vm_ctx->Execute();
+    return ctx->Execute(nullptr);
   }
   return false;
 }
@@ -208,7 +208,7 @@ TEST_P(SignalContextTest, CreateAndReadAMemo2) {
         scope = s;
         let memo = __CreateMemo(i => `${i} lynx`, "hello");
         value0 = __ReadSignal(memo);
-  
+
         let signal = __CreateSignal("thoughts");
         const fn = (pre) => {
             let str = __ReadSignal(signal);

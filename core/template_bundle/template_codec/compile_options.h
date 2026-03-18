@@ -4,6 +4,7 @@
 #ifndef CORE_TEMPLATE_BUNDLE_TEMPLATE_CODEC_COMPILE_OPTIONS_H_
 #define CORE_TEMPLATE_BUNDLE_TEMPLATE_CODEC_COMPILE_OPTIONS_H_
 
+#include <cstdint>
 #include <string>
 
 #include "core/renderer/tasm/config.h"
@@ -43,6 +44,13 @@ enum ArchOption : uint8_t { RADON_ARCH = 0, FIBER_ARCH, AIR_ARCH };
 
 enum CompileOptionConfigType : int32_t {
   CONFIG_TYPE_EXPERIMENT_SETTINGS = 1,
+};
+
+enum ContextType : uint8_t {
+  CONTEXT_TYPE_VM,
+  CONTEXT_TYPE_LEPUS_NG,
+  CONTEXT_TYPE_RTS_VM,
+  CONTEXT_TYPE_RTS_NATIVE,
 };
 
 /*
@@ -93,6 +101,7 @@ struct CompileOptions {
   bool encode_quickjs_bytecode_{false};
   bool enable_async_lepus_chunk_decode_{false};
   bool enable_simple_styling_{false};
+  uint8_t context_type_{1};
   // Compile options auto generated end
 };
 
@@ -128,7 +137,8 @@ struct CompileOptions {
   V(UINT8, enable_reuse_context, 30);             \
   V(UINT8, enable_css_invalidation_, 31);         \
   V(UINT8, enable_async_lepus_chunk_decode_, 32); \
-  V(UINT8, enable_simple_styling_, 33);
+  V(UINT8, enable_simple_styling_, 33);           \
+  V(UINT8, context_type_, 35);
 
 #define FOREACH_STRING_FIELD(V) \
   V(target_sdk_version_, 0);    \

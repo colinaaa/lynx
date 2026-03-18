@@ -275,7 +275,8 @@ TEST_F(ContextBinaryReaderTest, LynxBinaryReaderLepus) {
     TestUtils::RegisterBuiltin(decode_ctx.get());
     ASSERT_TRUE(decode_ctx->DeSerialize(
         *binary_reader.GetTemplateBundle().context_bundle_, true, nullptr));
-    ASSERT_TRUE(decode_ctx->Execute());
+    ASSERT_TRUE(decode_ctx->Execute(
+        binary_reader.GetTemplateBundle().context_bundle_.get()));
   }
 }
 
@@ -310,7 +311,8 @@ TEST_F(ContextBinaryReaderTest, LynxBinaryReaderLepusNG) {
     auto entry = TemplateEntry(decode_ctx, target_sdk_version);
     ASSERT_TRUE(entry.GetVm()->DeSerialize(
         *binary_reader.GetTemplateBundle().context_bundle_, false, nullptr));
-    ASSERT_TRUE(decode_ctx->Execute());
+    ASSERT_TRUE(decode_ctx->Execute(
+        binary_reader.GetTemplateBundle().context_bundle_.get()));
   }
 }
 
@@ -338,7 +340,8 @@ TEST_F(ContextBinaryReaderTest, DISABLED_TemplateBinaryReaderLepus) {
         false};
 
     ASSERT_TRUE(binary_reader.DecodeContext());
-    ASSERT_TRUE(binary_reader.GetVm()->Execute());
+    ASSERT_TRUE(binary_reader.GetVm()->Execute(
+        binary_reader.GetTemplateBundle().context_bundle_.get()));
   }
 }
 
@@ -364,7 +367,8 @@ TEST_F(ContextBinaryReaderTest, DISABLED_TemplateBinaryReaderLepusNG) {
         true};
 
     ASSERT_TRUE(binary_reader.DecodeContext());
-    ASSERT_TRUE(binary_reader.GetVm()->Execute());
+    ASSERT_TRUE(binary_reader.GetVm()->Execute(
+        binary_reader.GetTemplateBundle().context_bundle_.get()));
   }
 }
 

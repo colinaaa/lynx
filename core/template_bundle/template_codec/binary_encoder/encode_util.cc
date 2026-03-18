@@ -7,6 +7,7 @@
 #include <utility>
 
 #include "core/runtime/js/bytecode/quickjs/bytecode/quickjs_bytecode_provider_src.h"
+#include "core/runtime/lepus/context.h"
 #include "core/runtime/lepus/function.h"
 #include "core/runtime/lepusng/quick_context.h"
 #include "core/runtime/lepusng/quickjs_debug_info.h"
@@ -256,7 +257,7 @@ lynx::tasm::EncodeResult CreateSuccessResult(const std::vector<uint8_t>& buffer,
   rapidjson::Document document;
   rapidjson::Document::AllocatorType& allocator = document.GetAllocator();
   rapidjson::Value template_debug_data(rapidjson::kObjectType);
-  if (writer) {
+  if (writer && writer->mts_context()) {
     if (!writer->IsLepusNGContext()) {
       auto info = writer->GetDebugInfo();
       GetDebugInfo(info.lepus_funcs_, template_debug_data, allocator);
@@ -379,6 +380,22 @@ bool writefile(const std::string& filename, const std::string& src) {
   fclose(pf);
 
   return true;
+}
+
+lepus::ContextType GetContextType(const EncoderOptions& encoder_options) {
+  if (encoder_options.compile_options_.enable_lepus_ng_ ||
+      encoder_options.compile_options_.context_type_ ==
+          ContextType::CONTEXT_TYPE_LEPUS_NG) {
+    return lepus::ContextType::LepusNGContextType;
+  } else if (encoder_options.compile_options_.context_type_ ==
+             ContextType::CONTEXT_TYPE_RTS_VM) {
+    return lepus::ContextType::RTSContextType;
+  } else if (encoder_options.compile_options_.context_type_ ==
+             ContextType::CONTEXT_TYPE_RTS_NATIVE) {
+    return lepus::ContextType::RTSNativeContextType;
+  } else {
+    return lepus::ContextType::VMContextType;
+  }
 }
 
 }  // namespace tasm

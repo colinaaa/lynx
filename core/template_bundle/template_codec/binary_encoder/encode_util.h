@@ -97,6 +97,8 @@ std::string BinarySectionTypeToString(BinarySection section);
 
 bool writefile(const std::string& filename, const std::string& src);
 
+lepus::ContextType GetContextType(const EncoderOptions& encoder_options);
+
 }  // namespace tasm
 }  // namespace lynx
 

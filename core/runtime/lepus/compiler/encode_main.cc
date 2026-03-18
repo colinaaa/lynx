@@ -288,7 +288,7 @@ class TestLepus {
       long long start = std::chrono::duration_cast<std::chrono::microseconds>(
                             std::chrono::system_clock::now().time_since_epoch())
                             .count();
-      context.Execute();
+      context_->Execute(nullptr);
       long long end = std::chrono::duration_cast<std::chrono::microseconds>(
                           std::chrono::system_clock::now().time_since_epoch())
                           .count();

@@ -177,15 +177,14 @@ std::shared_ptr<Context> Context::CreateContext(
   }
 }
 
-bool Context::Execute() {
+bool Context::Execute(const ContextBundle* bundle) {
   if (HasPreExecuteSuccess()) {
     return true;
   }
   ScriptingScope scope(this);
 
   EnsureLynx();
-  return mts_context_->ExecuteBinaryWithBundle(/*bundle=*/nullptr,
-                                               /*ret_val=*/nullptr);
+  return mts_context_->ExecuteBinaryWithBundle(bundle, nullptr);
 }
 
 void Context::EnsureLynx() {
@@ -500,7 +499,7 @@ Value Context::CallClosureArgs(const Value& closure,
 
 bool Context::TryExecute() {
   TRACE_EVENT(LYNX_TRACE_CATEGORY, CONTEXT_TRY_EXECUTE);
-  has_pre_execute_success_ = Execute();
+  has_pre_execute_success_ = Execute(nullptr);
   return has_pre_execute_success_;
 }
 

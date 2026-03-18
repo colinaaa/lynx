@@ -22,7 +22,10 @@ group("tasm_group") {
 lepus_compile = is_android && build_lepus_compile
 
 lynx_core_source_set("tasm") {
-  include_dirs = [ "../../third_party" ]
+  include_dirs = [
+    "../../third_party",
+    # "//third_party/PrimTS/src",
+  ]
 
   # TODO(zhengsenyao): break tasm to into three targets: tasm, tasm_config & vdom_radon
   allow_circular_includes_from = [ "dom:dom_headers" ]

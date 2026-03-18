@@ -222,6 +222,16 @@ void ContextBinaryWriter::EncodeClosure(const fml::RefPtr<Closure>& value) {
   WriteCompactU32(index);
 }
 
+uint32_t ContextBinaryWriter::AddStringToTable(const char* str, size_t length) {
+  base::String string(str, length);
+  return string_table_.Insert(string);
+}
+
+const base::String& ContextBinaryWriter::GetStringFromTable(
+    uint32_t index) const {
+  return string_table_.Get(index);
+}
+
 void ContextBinaryWriter::EncodeUtf8Str(const char* value) {
   WriteStringDirectly(value);
 }

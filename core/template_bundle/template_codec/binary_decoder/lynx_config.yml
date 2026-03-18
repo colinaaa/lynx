@@ -251,6 +251,12 @@ compilerOptions:
     codeGen:
       - NONE
     export: false
+  contextType:
+    defaultValue: '1'
+    valueType: uint8_t
+    jsValueType: number
+    since: '3.7'
+    export: false
 # compiler options end here
 
 # PageConfig start here
