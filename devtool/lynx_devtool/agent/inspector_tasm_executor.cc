@@ -5,6 +5,7 @@
 #include "devtool/lynx_devtool/agent/inspector_tasm_executor.h"
 
 #include <cstdlib>
+#include <set>
 
 #include "base/include/log/logging.h"
 #include "core/renderer/css/css_decoder.h"
@@ -31,6 +32,39 @@ namespace devtool {
       sender->SendMessage("CDP", response);                                  \
     }                                                                        \
   } while (0)
+
+namespace {
+
+int GetAXTreeRequestNodeId(const Json::Value& params) {
+  if (params.isMember("id")) {
+    return params["id"].isString() ? std::atoi(params["id"].asString().c_str())
+                                   : params["id"].asInt();
+  }
+  if (params.isMember("nodeId")) {
+    return params["nodeId"].asInt();
+  }
+  if (params.isMember("backendNodeId")) {
+    return params["backendNodeId"].asInt();
+  }
+  return -1;
+}
+
+void AppendAXNodeIfNeeded(Element* element, std::set<int>& visited,
+                          Json::Value& nodes) {
+  if (!element) {
+    return;
+  }
+
+  int node_id = ElementInspector::NodeId(element);
+  if (visited.find(node_id) != visited.end()) {
+    return;
+  }
+
+  visited.insert(node_id);
+  nodes.append(AccessibilityTreeHelper::BuildAXNode(element));
+}
+
+}  // namespace
 
 InspectorTasmExecutor::InspectorTasmExecutor(
     const std::shared_ptr<LynxDevToolMediator>& devtool_mediator, int view_id)
@@ -566,14 +600,52 @@ void InspectorTasmExecutor::GetChildAXNodes(
   Json::Value content(Json::ValueType::objectValue);
   Json::Value nodes(Json::ValueType::arrayValue);
   Json::Value params = message["params"];
-  int node_id = params["id"].isString()
-                    ? std::atoi(params["id"].asString().c_str())
-                    : params["id"].asInt();
+  int node_id = GetAXTreeRequestNodeId(params);
 
   Element* element = GetElementById(node_id);
   if (element) {
     for (Element* child : element->GetChildren()) {
       nodes.append(AccessibilityTreeHelper::BuildAXNode(child));
+    }
+  }
+
+  content["nodes"] = nodes;
+  response["result"] = content;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
+}
+
+void InspectorTasmExecutor::GetPartialAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value content(Json::ValueType::objectValue);
+  Json::Value nodes(Json::ValueType::arrayValue);
+  Json::Value params = message["params"];
+  int node_id = GetAXTreeRequestNodeId(params);
+  Element* element = GetElementById(node_id);
+  std::set<int> visited;
+
+  AppendAXNodeIfNeeded(element, visited, nodes);
+
+  bool fetch_relatives =
+      !params.isMember("fetchRelatives") || params["fetchRelatives"].asBool();
+  if (element && fetch_relatives) {
+    for (Element* ancestor = element->parent(); ancestor;
+         ancestor = ancestor->parent()) {
+      AppendAXNodeIfNeeded(ancestor, visited, nodes);
+    }
+
+    if (element->parent()) {
+      for (Element* sibling : element->parent()->GetChildren()) {
+        if (sibling != element) {
+          AppendAXNodeIfNeeded(sibling, visited, nodes);
+        }
+      }
+    }
+
+    for (Element* child : element->GetChildren()) {
+      AppendAXNodeIfNeeded(child, visited, nodes);
     }
   }
 

@@ -450,6 +450,92 @@ TEST_F(InspectorTasmExecutorTest, GetChildAXNodesReturnsDirectChildrenCase) {
   EXPECT_EQ(res["result"]["nodes"][0]["name"]["value"], "Child label");
 }
 
+TEST_F(InspectorTasmExecutorTest,
+       GetPartialAXTreeReturnsTargetOnlyWhenRelativesDisabledCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto target = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(target.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      target.get(), "accessibility-label", "Target label");
+
+  root->AddChildAt(target, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 12;
+  message["params"]["nodeId"] = devtool::ElementInspector::NodeId(target.get());
+  message["params"]["fetchRelatives"] = false;
+  element_executor_->GetPartialAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 12);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 1U);
+  EXPECT_EQ(res["result"]["nodes"][0]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(target.get())));
+  EXPECT_EQ(res["result"]["nodes"][0]["parentId"],
+            std::to_string(devtool::ElementInspector::NodeId(root.get())));
+  EXPECT_EQ(res["result"]["nodes"][0]["name"]["value"], "Target label");
+}
+
+TEST_F(InspectorTasmExecutorTest,
+       GetPartialAXTreeReturnsRelativesByDefaultCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto target = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(target.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      target.get(), "accessibility-label", "Target label");
+
+  auto sibling = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(sibling.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      sibling.get(), "accessibility-label", "Sibling label");
+
+  auto child = manager_->CreateFiberElement("text");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(child.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(child.get(), "text",
+                                              "Child label");
+
+  root->AddChildAt(target, 0);
+  root->AddChildAt(sibling, 1);
+  target->AddChildAt(child, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 13;
+  message["params"]["nodeId"] = devtool::ElementInspector::NodeId(target.get());
+  element_executor_->GetPartialAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 13);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 4U);
+  EXPECT_EQ(res["result"]["nodes"][0]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(target.get())));
+  EXPECT_EQ(res["result"]["nodes"][1]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(root.get())));
+  EXPECT_EQ(res["result"]["nodes"][2]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(sibling.get())));
+  EXPECT_EQ(res["result"]["nodes"][3]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(child.get())));
+}
+
 TEST_F(InspectorTasmExecutorTest, DescribeNodeByNodeIdCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(

@@ -121,6 +121,7 @@ class InspectorTasmExecutor
   // accessibility domain
   DECLARE_DEVTOOL_METHOD(GetChildAXNodes)
   DECLARE_DEVTOOL_METHOD(GetFullAXTree)
+  DECLARE_DEVTOOL_METHOD(GetPartialAXTree)
   DECLARE_DEVTOOL_METHOD(GetRootAXNode)
 
   // css domain

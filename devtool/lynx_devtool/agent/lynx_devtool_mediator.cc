@@ -1134,6 +1134,14 @@ void LynxDevToolMediator::GetFullAXTree(
 void LynxDevToolMediator::GetPartialAXTree(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  if (tasm_task_runner_) {
+    RunOnTaskRunner(tasm_task_runner_,
+                    [element_executor = element_executor_, sender, message]() {
+                      element_executor->GetPartialAXTree(sender, message);
+                    });
+    return;
+  }
+
   RunOnDevToolThread([sender, message, executor = devtool_executor_] {
     executor->GetPartialAXTree(sender, message);
   });
