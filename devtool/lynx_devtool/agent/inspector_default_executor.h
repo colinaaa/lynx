@@ -46,10 +46,23 @@ class InspectorDefaultExecutor
   DECLARE_DEVTOOL_METHOD(InspectorEnable)
   DECLARE_DEVTOOL_METHOD(InspectorDetached)
 
+  DECLARE_DEVTOOL_METHOD(AccessibilityEnable)
+  DECLARE_DEVTOOL_METHOD(AccessibilityDisable)
+  DECLARE_DEVTOOL_METHOD(GetAXNodeAndAncestors)
+  DECLARE_DEVTOOL_METHOD(GetChildAXNodes)
+  DECLARE_DEVTOOL_METHOD(GetFullAXTree)
+  DECLARE_DEVTOOL_METHOD(GetPartialAXTree)
+  DECLARE_DEVTOOL_METHOD(GetRootAXNode)
+  DECLARE_DEVTOOL_METHOD(QueryAXTree)
+
   DECLARE_DEVTOOL_METHOD(LynxSetTraceMode)
   DECLARE_DEVTOOL_METHOD(LynxGetVersion)
 
  private:
+  void SendNotImplementedResponse(
+      const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+      const Json::Value& message);
+
   std::weak_ptr<LynxDevToolMediator> devtool_mediator_wp_;
   std::shared_ptr<DevToolPlatformFacade> devtool_platform_facade_;
   std::unique_ptr<ConsoleMessageManager> console_msg_manager_;

@@ -69,6 +69,17 @@ TEST_F(LynxDevToolNGTest, AttachSetsMediatorAttached) {
   EXPECT_TRUE(devtool->devtool_mediator_->attached_);
 }
 
+TEST_F(LynxDevToolNGTest, RegisterAccessibilityDomainAgent) {
+  auto devtool = std::make_shared<lynx::devtool::LynxDevToolNG>(true);
+
+  devtool->RegisterInstanceDomainAgents();
+  EXPECT_NE(devtool->GetAgent("Accessibility"), nullptr);
+
+  auto gated_devtool = std::make_shared<lynx::devtool::LynxDevToolNG>(true);
+  gated_devtool->RegisterInstanceDomainAgents("enable_cdp_domain_accessibility");
+  EXPECT_NE(gated_devtool->GetAgent("Accessibility"), nullptr);
+}
+
 TEST_F(LynxDevToolNGTest, OnTasmCreatedInitializesMediator) {
   lynx::base::UIThread::Init();
   auto devtool = std::make_shared<lynx::devtool::LynxDevToolNG>(true);

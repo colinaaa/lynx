@@ -6,6 +6,7 @@
 #include "core/devtool_wrapper/devtool_pool.h"
 #include "core/shell/lynx_shell.h"
 #include "devtool/base_devtool/native/public/abstract_devtool.h"
+#include "devtool/lynx_devtool/agent/domain_agent/inspector_accessibility_agent.h"
 #include "devtool/lynx_devtool/agent/domain_agent/inspector_agent.h"
 #include "devtool/lynx_devtool/agent/domain_agent/inspector_component_agent.h"
 #include "devtool/lynx_devtool/agent/domain_agent/inspector_css_agent_ng.h"
@@ -145,6 +146,8 @@ void LynxDevToolNG::RegisterGlobalDomainAgents(
 }
 
 void LynxDevToolNG::RegisterInstanceDomainAgents() {
+  RegisterAgent("Accessibility", std::make_unique<InspectorAccessibilityAgent>(
+                                     devtool_mediator_));
   RegisterAgent("Inspector",
                 std::make_unique<InspectorAgent>(devtool_mediator_));
   RegisterAgent("CSS",
@@ -194,6 +197,10 @@ void LynxDevToolNG::RegisterInstanceDomainAgents(
   if (!domain_key.compare(domain_key_prefix + "dom")) {
     RegisterAgent("DOM",
                   std::make_unique<InspectorDOMAgentNG>(devtool_mediator_));
+  } else if (!domain_key.compare(domain_key_prefix + "accessibility")) {
+    RegisterAgent("Accessibility",
+                  std::make_unique<InspectorAccessibilityAgent>(
+                      devtool_mediator_));
   } else if (!domain_key.compare(domain_key_prefix + "css")) {
     RegisterAgent("CSS",
                   std::make_unique<InspectorCSSAgentNG>(devtool_mediator_));

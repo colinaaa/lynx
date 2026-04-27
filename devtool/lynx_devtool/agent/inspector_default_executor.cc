@@ -43,6 +43,62 @@ void InspectorDefaultExecutor::InspectorDetached(
   sender->SendMessage("CDP", content);
 }
 
+void InspectorDefaultExecutor::SendNotImplementedResponse(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  sender->SendErrorResponse(message["id"].asInt64(),
+                            "Not implemented: " +
+                                message["method"].asString());
+}
+
+void InspectorDefaultExecutor::AccessibilityEnable(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
+void InspectorDefaultExecutor::AccessibilityDisable(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
+void InspectorDefaultExecutor::GetAXNodeAndAncestors(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
+void InspectorDefaultExecutor::GetChildAXNodes(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
+void InspectorDefaultExecutor::GetFullAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
+void InspectorDefaultExecutor::GetPartialAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
+void InspectorDefaultExecutor::GetRootAXNode(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
+void InspectorDefaultExecutor::QueryAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  SendNotImplementedResponse(sender, message);
+}
+
 void InspectorDefaultExecutor::LynxSetTraceMode(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {

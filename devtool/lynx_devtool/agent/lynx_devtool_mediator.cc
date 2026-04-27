@@ -1075,6 +1075,70 @@ void LynxDevToolMediator::InspectorDetached(
   });
 }
 
+void LynxDevToolMediator::AccessibilityEnable(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->AccessibilityEnable(sender, message);
+  });
+}
+
+void LynxDevToolMediator::AccessibilityDisable(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->AccessibilityDisable(sender, message);
+  });
+}
+
+void LynxDevToolMediator::GetAXNodeAndAncestors(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->GetAXNodeAndAncestors(sender, message);
+  });
+}
+
+void LynxDevToolMediator::GetChildAXNodes(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->GetChildAXNodes(sender, message);
+  });
+}
+
+void LynxDevToolMediator::GetFullAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->GetFullAXTree(sender, message);
+  });
+}
+
+void LynxDevToolMediator::GetPartialAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->GetPartialAXTree(sender, message);
+  });
+}
+
+void LynxDevToolMediator::GetRootAXNode(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->GetRootAXNode(sender, message);
+  });
+}
+
+void LynxDevToolMediator::QueryAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  RunOnDevToolThread([sender, message, executor = devtool_executor_] {
+    executor->QueryAXTree(sender, message);
+  });
+}
+
 void LynxDevToolMediator::PerformanceEnable(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {

@@ -146,6 +146,16 @@ class LynxDevToolMediator
   DECLARE_DEVTOOL_METHOD(InspectorEnable)
   DECLARE_DEVTOOL_METHOD(InspectorDetached)
 
+  // Accessibility domain -> devtools executor
+  DECLARE_DEVTOOL_METHOD(AccessibilityEnable)
+  DECLARE_DEVTOOL_METHOD(AccessibilityDisable)
+  DECLARE_DEVTOOL_METHOD(GetAXNodeAndAncestors)
+  DECLARE_DEVTOOL_METHOD(GetChildAXNodes)
+  DECLARE_DEVTOOL_METHOD(GetFullAXTree)
+  DECLARE_DEVTOOL_METHOD(GetPartialAXTree)
+  DECLARE_DEVTOOL_METHOD(GetRootAXNode)
+  DECLARE_DEVTOOL_METHOD(QueryAXTree)
+
   // methods of Log domain -> devtool executor
   DECLARE_DEVTOOL_METHOD(LogEnable)
   DECLARE_DEVTOOL_METHOD(LogDisable)
