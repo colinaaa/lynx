@@ -410,6 +410,49 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsDepthLimitedTreeCase) {
   EXPECT_EQ(child_node["name"]["value"], "Submit");
 }
 
+TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsIgnoredReasonsCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto hidden = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(hidden.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(hidden.get(),
+                                              "accessibility-element", "false");
+  lynx::devtool::ElementInspector::UpdateAttr(
+      hidden.get(), "accessibility-elements-hidden", "true");
+
+  root->AddChildAt(hidden, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 17;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 17);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+  EXPECT_FALSE(res["result"]["nodes"][0]["ignored"].asBool());
+  EXPECT_TRUE(res["result"]["nodes"][0]["ignoredReasons"].isNull());
+
+  const Json::Value& hidden_node = res["result"]["nodes"][1];
+  EXPECT_TRUE(hidden_node["ignored"].asBool());
+  ASSERT_TRUE(hidden_node["ignoredReasons"].isArray());
+  ASSERT_EQ(hidden_node["ignoredReasons"].size(), 2U);
+  EXPECT_EQ(hidden_node["ignoredReasons"][0]["name"], "uninteresting");
+  EXPECT_EQ(hidden_node["ignoredReasons"][0]["value"]["type"], "boolean");
+  EXPECT_TRUE(hidden_node["ignoredReasons"][0]["value"]["value"].asBool());
+  EXPECT_EQ(hidden_node["ignoredReasons"][1]["name"], "ariaHiddenSubtree");
+  EXPECT_EQ(hidden_node["ignoredReasons"][1]["value"]["type"], "boolean");
+  EXPECT_TRUE(hidden_node["ignoredReasons"][1]["value"]["value"].asBool());
+}
+
 TEST_F(InspectorTasmExecutorTest, GetChildAXNodesReturnsDirectChildrenCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(

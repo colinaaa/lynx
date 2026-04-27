@@ -29,6 +29,14 @@ Json::Value BuildAXValue(const std::string& type, const std::string& value) {
   return ax_value;
 }
 
+Json::Value BuildAXBooleanProperty(const std::string& name, bool value) {
+  Json::Value property(Json::ValueType::objectValue);
+  property["name"] = name;
+  property["value"]["type"] = "boolean";
+  property["value"]["value"] = value;
+  return property;
+}
+
 std::string GetAXNodeId(Element* element) {
   return std::to_string(ElementInspector::NodeId(element));
 }
@@ -138,16 +146,22 @@ std::string GetAccessibleName(Element* element) {
   return child_name;
 }
 
-bool IsIgnored(Element* element) {
+Json::Value BuildIgnoredReasons(Element* element) {
+  Json::Value ignored_reasons(Json::ValueType::arrayValue);
+
   std::string accessibility_element =
       GetAttribute(element, kAccessibilityElement);
   if (IsFalseAttribute(accessibility_element)) {
-    return true;
+    ignored_reasons.append(BuildAXBooleanProperty("uninteresting", true));
   }
 
   std::string elements_hidden =
       GetAttribute(element, kAccessibilityElementsHidden);
-  return IsTrueAttribute(elements_hidden);
+  if (IsTrueAttribute(elements_hidden)) {
+    ignored_reasons.append(BuildAXBooleanProperty("ariaHiddenSubtree", true));
+  }
+
+  return ignored_reasons;
 }
 
 void AppendAXTree(Element* element, int depth, Json::Value& nodes) {
@@ -175,7 +189,11 @@ Json::Value AccessibilityTreeHelper::BuildAXNode(Element* element) {
   }
 
   node["nodeId"] = GetAXNodeId(element);
-  node["ignored"] = IsIgnored(element);
+  Json::Value ignored_reasons = BuildIgnoredReasons(element);
+  node["ignored"] = !ignored_reasons.empty();
+  if (!ignored_reasons.empty()) {
+    node["ignoredReasons"] = ignored_reasons;
+  }
   node["role"] = BuildAXValue("role", GetRole(element));
   node["name"] = BuildAXValue("computedString", GetAccessibleName(element));
   node["backendDOMNodeId"] = ElementInspector::NodeId(element);
