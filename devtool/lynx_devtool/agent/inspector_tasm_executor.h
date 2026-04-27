@@ -119,6 +119,7 @@ class InspectorTasmExecutor
   DECLARE_DEVTOOL_METHOD(GetOriginalNodeIndex)
 
   // accessibility domain
+  DECLARE_DEVTOOL_METHOD(GetChildAXNodes)
   DECLARE_DEVTOOL_METHOD(GetFullAXTree)
   DECLARE_DEVTOOL_METHOD(GetRootAXNode)
 

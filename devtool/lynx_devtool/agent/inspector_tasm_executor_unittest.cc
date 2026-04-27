@@ -410,6 +410,46 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsDepthLimitedTreeCase) {
   EXPECT_EQ(child_node["name"]["value"], "Submit");
 }
 
+TEST_F(InspectorTasmExecutorTest, GetChildAXNodesReturnsDirectChildrenCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto child = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(child.get()));
+
+  auto grandchild = manager_->CreateFiberElement("text");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(grandchild.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(grandchild.get(), "text",
+                                              "Child label");
+
+  root->AddChildAt(child, 0);
+  child->AddChildAt(grandchild, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 11;
+  message["params"]["id"] =
+      std::to_string(devtool::ElementInspector::NodeId(child.get()));
+  element_executor_->GetChildAXNodes(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 11);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 1U);
+  EXPECT_EQ(
+      res["result"]["nodes"][0]["nodeId"],
+      std::to_string(devtool::ElementInspector::NodeId(grandchild.get())));
+  EXPECT_EQ(res["result"]["nodes"][0]["parentId"],
+            std::to_string(devtool::ElementInspector::NodeId(child.get())));
+  EXPECT_EQ(res["result"]["nodes"][0]["name"]["value"], "Child label");
+}
+
 TEST_F(InspectorTasmExecutorTest, DescribeNodeByNodeIdCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(

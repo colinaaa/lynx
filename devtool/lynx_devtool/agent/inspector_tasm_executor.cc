@@ -4,6 +4,8 @@
 
 #include "devtool/lynx_devtool/agent/inspector_tasm_executor.h"
 
+#include <cstdlib>
+
 #include "base/include/log/logging.h"
 #include "core/renderer/css/css_decoder.h"
 #include "core/services/replay/replay_controller.h"
@@ -552,6 +554,30 @@ void InspectorTasmExecutor::GetFullAXTree(
   }
 
   content["nodes"] = AccessibilityTreeHelper::BuildAXTree(element_root_, depth);
+  response["result"] = content;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
+}
+
+void InspectorTasmExecutor::GetChildAXNodes(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value content(Json::ValueType::objectValue);
+  Json::Value nodes(Json::ValueType::arrayValue);
+  Json::Value params = message["params"];
+  int node_id = params["id"].isString()
+                    ? std::atoi(params["id"].asString().c_str())
+                    : params["id"].asInt();
+
+  Element* element = GetElementById(node_id);
+  if (element) {
+    for (Element* child : element->GetChildren()) {
+      nodes.append(AccessibilityTreeHelper::BuildAXNode(child));
+    }
+  }
+
+  content["nodes"] = nodes;
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);

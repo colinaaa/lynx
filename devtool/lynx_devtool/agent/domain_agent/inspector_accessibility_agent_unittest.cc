@@ -78,8 +78,7 @@ TEST_F(InspectorAccessibilityAgentTest, EnableAndDisableReturnSuccess) {
   }
 }
 
-TEST_F(InspectorAccessibilityAgentTest,
-       DispatchesUnimplementedProtocolMethods) {
+TEST_F(InspectorAccessibilityAgentTest, DispatchesMethodsToDefaultFallback) {
   const std::string methods[] = {
       "Accessibility.getAXNodeAndAncestors", "Accessibility.getChildAXNodes",
       "Accessibility.getFullAXTree",         "Accessibility.getPartialAXTree",
