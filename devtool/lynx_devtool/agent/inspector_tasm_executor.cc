@@ -64,6 +64,36 @@ void AppendAXNodeIfNeeded(Element* element, std::set<int>& visited,
   nodes.append(AccessibilityTreeHelper::BuildAXNode(element));
 }
 
+bool AXNodeMatchesQuery(const Json::Value& node, const Json::Value& params) {
+  if (params.isMember("accessibleName") &&
+      node["name"]["value"].asString() != params["accessibleName"].asString()) {
+    return false;
+  }
+
+  if (params.isMember("role") &&
+      node["role"]["value"].asString() != params["role"].asString()) {
+    return false;
+  }
+
+  return true;
+}
+
+void AppendMatchingAXSubtree(Element* element, const Json::Value& params,
+                             Json::Value& nodes) {
+  if (!element) {
+    return;
+  }
+
+  Json::Value node = AccessibilityTreeHelper::BuildAXNode(element);
+  if (AXNodeMatchesQuery(node, params)) {
+    nodes.append(node);
+  }
+
+  for (Element* child : element->GetChildren()) {
+    AppendMatchingAXSubtree(child, params, nodes);
+  }
+}
+
 }  // namespace
 
 InspectorTasmExecutor::InspectorTasmExecutor(
@@ -684,6 +714,33 @@ void InspectorTasmExecutor::GetRootAXNode(
   if (element_root_) {
     content["node"] = AccessibilityTreeHelper::BuildAXNode(element_root_);
   }
+  response["result"] = content;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
+}
+
+void InspectorTasmExecutor::QueryAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value content(Json::ValueType::objectValue);
+  Json::Value nodes(Json::ValueType::arrayValue);
+  Json::Value params = message["params"];
+  int node_id = GetAXTreeRequestNodeId(params);
+  Element* element = GetElementById(node_id);
+
+  if (!element) {
+    Json::Value error(Json::ValueType::objectValue);
+    error["code"] = Json::Value(kServerError);
+    error["message"] = Json::Value("Could not find node");
+    response["error"] = error;
+    response["id"] = message["id"].asInt64();
+    sender->SendMessage("CDP", response);
+    return;
+  }
+
+  AppendMatchingAXSubtree(element, params, nodes);
+  content["nodes"] = nodes;
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);

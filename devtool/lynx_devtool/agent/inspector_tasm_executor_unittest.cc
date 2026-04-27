@@ -582,6 +582,85 @@ TEST_F(InspectorTasmExecutorTest, GetAXNodeAndAncestorsReturnsParentChainCase) {
             std::to_string(devtool::ElementInspector::NodeId(root.get())));
 }
 
+TEST_F(InspectorTasmExecutorTest, QueryAXTreeFiltersByNameAndRoleCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto button = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(button.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(button.get(),
+                                              "accessibility-label", "Submit");
+  lynx::devtool::ElementInspector::UpdateAttr(button.get(),
+                                              "accessibility-traits", "button");
+
+  auto text = manager_->CreateFiberElement("text");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(text.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(text.get(), "text", "Submit");
+
+  root->AddChildAt(button, 0);
+  root->AddChildAt(text, 1);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 15;
+  message["params"]["nodeId"] = devtool::ElementInspector::NodeId(root.get());
+  message["params"]["accessibleName"] = "Submit";
+  message["params"]["role"] = "button";
+  element_executor_->QueryAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 15);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 1U);
+  EXPECT_EQ(res["result"]["nodes"][0]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(button.get())));
+  EXPECT_EQ(res["result"]["nodes"][0]["name"]["value"], "Submit");
+  EXPECT_EQ(res["result"]["nodes"][0]["role"]["value"], "button");
+}
+
+TEST_F(InspectorTasmExecutorTest, QueryAXTreeReturnsSubtreeWithoutFiltersCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto parent = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(parent.get()));
+  auto child = manager_->CreateFiberElement("text");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(child.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(child.get(), "text",
+                                              "Child label");
+
+  root->AddChildAt(parent, 0);
+  parent->AddChildAt(child, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 16;
+  message["params"]["nodeId"] = devtool::ElementInspector::NodeId(parent.get());
+  element_executor_->QueryAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 16);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+  EXPECT_EQ(res["result"]["nodes"][0]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(parent.get())));
+  EXPECT_EQ(res["result"]["nodes"][1]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(child.get())));
+  EXPECT_EQ(res["result"]["nodes"][1]["name"]["value"], "Child label");
+}
+
 TEST_F(InspectorTasmExecutorTest, DescribeNodeByNodeIdCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(

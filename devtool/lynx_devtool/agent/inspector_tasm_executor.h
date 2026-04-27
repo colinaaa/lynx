@@ -124,6 +124,7 @@ class InspectorTasmExecutor
   DECLARE_DEVTOOL_METHOD(GetFullAXTree)
   DECLARE_DEVTOOL_METHOD(GetPartialAXTree)
   DECLARE_DEVTOOL_METHOD(GetRootAXNode)
+  DECLARE_DEVTOOL_METHOD(QueryAXTree)
 
   // css domain
   DECLARE_DEVTOOL_METHOD(CSS_Enable)
