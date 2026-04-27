@@ -154,6 +154,11 @@ std::string GetAccessibleName(Element* element) {
     return text;
   }
 
+  std::string role = GetRole(element);
+  if (role == "generic" || role == "RootWebArea") {
+    return "";
+  }
+
   std::string child_name;
   for (Element* child : element->GetChildren()) {
     child_name += GetAccessibleName(child);
@@ -161,12 +166,31 @@ std::string GetAccessibleName(Element* element) {
   return child_name;
 }
 
+bool HasAXSemantics(Element* element) {
+  return IsTrueAttribute(GetAttribute(element, kAccessibilityElement)) ||
+         IsTrueAttribute(GetAttribute(element, kAccessibilityHeading)) ||
+         !GetAttribute(element, kAccessibilityLabel).empty() ||
+         !GetAttribute(element, kAccessibilityRoleDescription).empty() ||
+         !GetAttribute(element, kAccessibilityTraits).empty() ||
+         !GetAttribute(element, kAccessibilityValue).empty() ||
+         !GetAttribute(element, kText).empty();
+}
+
+bool IsLayoutOnlyGenericElement(Element* element) {
+  if (!element || element->parent() == nullptr) {
+    return false;
+  }
+
+  return GetRole(element) == "generic" && !HasAXSemantics(element);
+}
+
 Json::Value BuildIgnoredReasons(Element* element) {
   Json::Value ignored_reasons(Json::ValueType::arrayValue);
 
   std::string accessibility_element =
       GetAttribute(element, kAccessibilityElement);
-  if (IsFalseAttribute(accessibility_element)) {
+  if (IsFalseAttribute(accessibility_element) ||
+      IsLayoutOnlyGenericElement(element)) {
     ignored_reasons.append(BuildAXBooleanProperty("uninteresting", true));
   }
 

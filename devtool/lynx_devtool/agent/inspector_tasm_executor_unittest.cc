@@ -453,6 +453,65 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsIgnoredReasonsCase) {
   EXPECT_TRUE(hidden_node["ignoredReasons"][1]["value"]["value"].asBool());
 }
 
+TEST_F(InspectorTasmExecutorTest,
+       GetFullAXTreeMarksLayoutOnlyGenericNodesIgnoredCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto layout = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(layout.get()));
+
+  auto button = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(button.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(button.get(),
+                                              "accessibility-traits", "button");
+  lynx::devtool::ElementInspector::UpdateAttr(button.get(), "text", "Submit");
+
+  auto explicit_element = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(explicit_element.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      explicit_element.get(), "accessibility-element", "true");
+
+  root->AddChildAt(layout, 0);
+  layout->AddChildAt(button, 0);
+  root->AddChildAt(explicit_element, 1);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 39;
+  message["params"]["depth"] = 2;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 39);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 4U);
+
+  const Json::Value& layout_node = res["result"]["nodes"][1];
+  EXPECT_EQ(layout_node["role"]["value"], "generic");
+  EXPECT_EQ(layout_node["name"]["value"], "");
+  EXPECT_TRUE(layout_node["ignored"].asBool());
+  ASSERT_TRUE(layout_node["ignoredReasons"].isArray());
+  ASSERT_EQ(layout_node["ignoredReasons"].size(), 1U);
+  EXPECT_EQ(layout_node["ignoredReasons"][0]["name"], "uninteresting");
+
+  const Json::Value& button_node = res["result"]["nodes"][2];
+  EXPECT_FALSE(button_node["ignored"].asBool());
+  EXPECT_EQ(button_node["role"]["value"], "button");
+  EXPECT_EQ(button_node["name"]["value"], "Submit");
+
+  const Json::Value& explicit_node = res["result"]["nodes"][3];
+  EXPECT_FALSE(explicit_node["ignored"].asBool());
+  EXPECT_EQ(explicit_node["role"]["value"], "generic");
+}
+
 TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsAccessibilityValueCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(
