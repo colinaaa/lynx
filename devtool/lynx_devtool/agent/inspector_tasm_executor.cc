@@ -49,6 +49,13 @@ int GetAXTreeRequestNodeId(const Json::Value& params) {
   return -1;
 }
 
+bool IsAXNodeAttribute(const std::string& name) {
+  return name == "accessibility-element" ||
+         name == "accessibility-elements-hidden" ||
+         name == "accessibility-label" || name == "accessibility-traits" ||
+         name == "accessibility-value" || name == "text";
+}
+
 void AppendAXNodeIfNeeded(Element* element, std::set<int>& visited,
                           Json::Value& nodes) {
   if (!element) {
@@ -201,6 +208,9 @@ void InspectorTasmExecutor::SendDOMEventMsg(const DomCdpEvent& event_name,
     msg["method"] = "DOM.attributeRemoved";
     msg["params"]["nodeId"] = nodeId;
     msg["params"]["name"] = name;
+    if (IsAXNodeAttribute(name)) {
+      ax_updated_element = GetElementById(nodeId);
+    }
   } else if (event_name == DomCdpEvent::ATTRIBUTE_MODIFIED) {
     msg["method"] = "DOM.attributeModified";
     msg["params"]["nodeId"] = nodeId;
@@ -215,7 +225,9 @@ void InspectorTasmExecutor::SendDOMEventMsg(const DomCdpEvent& event_name,
     }
     msg["params"]["value"] =
         ElementHelper::GetAttributesAsTextOfNode(ptr, name);
-    ax_updated_element = ptr;
+    if (IsAXNodeAttribute(name)) {
+      ax_updated_element = ptr;
+    }
   } else if (event_name == DomCdpEvent::CHILD_NODE_REMOVED) {
     msg["method"] = "DOM.childNodeRemoved";
     msg["params"]["parentNodeId"] = parentNodeId;
