@@ -51,19 +51,42 @@ class InspectorAccessibilityAgentTest : public ::testing::Test {
   std::shared_ptr<lynx::testing::LynxDevToolNGMock> devtool_;
 };
 
-TEST_F(InspectorAccessibilityAgentTest, DispatchesAllProtocolMethods) {
+TEST_F(InspectorAccessibilityAgentTest, EnableAndDisableReturnSuccess) {
   const std::string methods[] = {
       "Accessibility.disable",
       "Accessibility.enable",
-      "Accessibility.getAXNodeAndAncestors",
-      "Accessibility.getChildAXNodes",
-      "Accessibility.getFullAXTree",
-      "Accessibility.getPartialAXTree",
-      "Accessibility.getRootAXNode",
-      "Accessibility.queryAXTree",
   };
 
-  for (int i = 0; i < 8; ++i) {
+  for (int i = 0; i < 2; ++i) {
+    MockReceiver::GetInstance().ResetAll();
+
+    Json::Value message(Json::ValueType::objectValue);
+    message["id"] = i + 1;
+    message["method"] = methods[i];
+
+    agent_->CallMethod(devtool_->message_sender_, message);
+    WaitForMessage();
+
+    EXPECT_EQ(MockReceiver::GetInstance().received_message_.first, "CDP");
+    Json::Value response;
+    Json::Reader reader;
+    ASSERT_TRUE(reader.parse(
+        MockReceiver::GetInstance().received_message_.second, response));
+    EXPECT_EQ(response["id"].asInt(), i + 1);
+    EXPECT_TRUE(response["error"].isNull());
+    EXPECT_TRUE(response["result"].isObject());
+  }
+}
+
+TEST_F(InspectorAccessibilityAgentTest,
+       DispatchesUnimplementedProtocolMethods) {
+  const std::string methods[] = {
+      "Accessibility.getAXNodeAndAncestors", "Accessibility.getChildAXNodes",
+      "Accessibility.getFullAXTree",         "Accessibility.getPartialAXTree",
+      "Accessibility.getRootAXNode",         "Accessibility.queryAXTree",
+  };
+
+  for (int i = 0; i < 6; ++i) {
     MockReceiver::GetInstance().ResetAll();
 
     Json::Value message(Json::ValueType::objectValue);

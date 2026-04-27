@@ -1110,6 +1110,14 @@ void LynxDevToolMediator::GetChildAXNodes(
 void LynxDevToolMediator::GetFullAXTree(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  if (tasm_task_runner_) {
+    RunOnTaskRunner(tasm_task_runner_,
+                    [element_executor = element_executor_, sender, message]() {
+                      element_executor->GetFullAXTree(sender, message);
+                    });
+    return;
+  }
+
   RunOnDevToolThread([sender, message, executor = devtool_executor_] {
     executor->GetFullAXTree(sender, message);
   });
@@ -1126,6 +1134,14 @@ void LynxDevToolMediator::GetPartialAXTree(
 void LynxDevToolMediator::GetRootAXNode(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  if (tasm_task_runner_) {
+    RunOnTaskRunner(tasm_task_runner_,
+                    [element_executor = element_executor_, sender, message]() {
+                      element_executor->GetRootAXNode(sender, message);
+                    });
+    return;
+  }
+
   RunOnDevToolThread([sender, message, executor = devtool_executor_] {
     executor->GetRootAXNode(sender, message);
   });

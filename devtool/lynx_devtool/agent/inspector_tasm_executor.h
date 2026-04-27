@@ -118,6 +118,10 @@ class InspectorTasmExecutor
   DECLARE_DEVTOOL_METHOD(DiscardSearchResults)
   DECLARE_DEVTOOL_METHOD(GetOriginalNodeIndex)
 
+  // accessibility domain
+  DECLARE_DEVTOOL_METHOD(GetFullAXTree)
+  DECLARE_DEVTOOL_METHOD(GetRootAXNode)
+
   // css domain
   DECLARE_DEVTOOL_METHOD(CSS_Enable)
   DECLARE_DEVTOOL_METHOD(CSS_Disable)

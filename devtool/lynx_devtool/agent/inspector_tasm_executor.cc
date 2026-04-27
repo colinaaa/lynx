@@ -10,6 +10,7 @@
 #include "devtool/base_devtool/native/public/devtool_status.h"
 #include "devtool/lynx_devtool/agent/inspector_util.h"
 #include "devtool/lynx_devtool/agent/lynx_devtool_mediator.h"
+#include "devtool/lynx_devtool/element/accessibility_tree_helper.h"
 #include "devtool/lynx_devtool/element/element_helper.h"
 #include "devtool/lynx_devtool/element/helper_util.h"
 #include "third_party/modp_b64/modp_b64.h"
@@ -534,6 +535,36 @@ void InspectorTasmExecutor::DOM_Disable(
     const Json::Value& message) {
   Json::Value response(Json::ValueType::objectValue);
   Json::Value content(Json::ValueType::objectValue);
+  response["result"] = content;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
+}
+
+void InspectorTasmExecutor::GetFullAXTree(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value content(Json::ValueType::objectValue);
+  Json::Value params = message["params"];
+  int depth = -1;
+  if (params.isMember("depth")) {
+    depth = params["depth"].asInt() < -1 ? -1 : params["depth"].asInt();
+  }
+
+  content["nodes"] = AccessibilityTreeHelper::BuildAXTree(element_root_, depth);
+  response["result"] = content;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
+}
+
+void InspectorTasmExecutor::GetRootAXNode(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value content(Json::ValueType::objectValue);
+  if (element_root_) {
+    content["node"] = AccessibilityTreeHelper::BuildAXNode(element_root_);
+  }
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);

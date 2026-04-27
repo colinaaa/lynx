@@ -62,6 +62,9 @@ class InspectorDefaultExecutor
   void SendNotImplementedResponse(
       const std::shared_ptr<lynx::devtool::MessageSender>& sender,
       const Json::Value& message);
+  void SendEmptyResponse(
+      const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+      const Json::Value& message);
 
   std::weak_ptr<LynxDevToolMediator> devtool_mediator_wp_;
   std::shared_ptr<DevToolPlatformFacade> devtool_platform_facade_;

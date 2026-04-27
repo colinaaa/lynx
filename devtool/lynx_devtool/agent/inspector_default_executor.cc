@@ -47,20 +47,29 @@ void InspectorDefaultExecutor::SendNotImplementedResponse(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
   sender->SendErrorResponse(message["id"].asInt64(),
-                            "Not implemented: " +
-                                message["method"].asString());
+                            "Not implemented: " + message["method"].asString());
+}
+
+void InspectorDefaultExecutor::SendEmptyResponse(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value content(Json::ValueType::objectValue);
+  response["result"] = content;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
 }
 
 void InspectorDefaultExecutor::AccessibilityEnable(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
-  SendNotImplementedResponse(sender, message);
+  SendEmptyResponse(sender, message);
 }
 
 void InspectorDefaultExecutor::AccessibilityDisable(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
-  SendNotImplementedResponse(sender, message);
+  SendEmptyResponse(sender, message);
 }
 
 void InspectorDefaultExecutor::GetAXNodeAndAncestors(
