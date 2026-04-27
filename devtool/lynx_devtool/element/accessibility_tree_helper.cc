@@ -19,6 +19,8 @@ constexpr const char* kAccessibilityElement = "accessibility-element";
 constexpr const char* kAccessibilityElementsHidden =
     "accessibility-elements-hidden";
 constexpr const char* kAccessibilityLabel = "accessibility-label";
+constexpr const char* kAccessibilityRoleDescription =
+    "accessibility-role-description";
 constexpr const char* kAccessibilityTraits = "accessibility-traits";
 constexpr const char* kAccessibilityValue = "accessibility-value";
 constexpr const char* kText = "text";
@@ -35,6 +37,14 @@ Json::Value BuildAXBooleanProperty(const std::string& name, bool value) {
   property["name"] = name;
   property["value"]["type"] = "boolean";
   property["value"]["value"] = value;
+  return property;
+}
+
+Json::Value BuildAXStringProperty(const std::string& name,
+                                  const std::string& value) {
+  Json::Value property(Json::ValueType::objectValue);
+  property["name"] = name;
+  property["value"] = BuildAXValue("string", value);
   return property;
 }
 
@@ -165,6 +175,19 @@ Json::Value BuildIgnoredReasons(Element* element) {
   return ignored_reasons;
 }
 
+Json::Value BuildProperties(Element* element) {
+  Json::Value properties(Json::ValueType::arrayValue);
+
+  std::string role_description =
+      GetAttribute(element, kAccessibilityRoleDescription);
+  if (!role_description.empty()) {
+    properties.append(
+        BuildAXStringProperty("roledescription", role_description));
+  }
+
+  return properties;
+}
+
 void AppendAXTree(Element* element, int depth, Json::Value& nodes) {
   if (!element) {
     return;
@@ -197,6 +220,10 @@ Json::Value AccessibilityTreeHelper::BuildAXNode(Element* element) {
   }
   node["role"] = BuildAXValue("role", GetRole(element));
   node["name"] = BuildAXValue("computedString", GetAccessibleName(element));
+  Json::Value properties = BuildProperties(element);
+  if (!properties.empty()) {
+    node["properties"] = properties;
+  }
   std::string value = GetAttribute(element, kAccessibilityValue);
   if (!value.empty()) {
     node["value"] = BuildAXValue("string", value);

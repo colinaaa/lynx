@@ -52,7 +52,9 @@ int GetAXTreeRequestNodeId(const Json::Value& params) {
 bool IsAXNodeAttribute(const std::string& name) {
   return name == "accessibility-element" ||
          name == "accessibility-elements-hidden" ||
-         name == "accessibility-label" || name == "accessibility-traits" ||
+         name == "accessibility-label" ||
+         name == "accessibility-role-description" ||
+         name == "accessibility-traits" ||
          name == "accessibility-value" || name == "text";
 }
 

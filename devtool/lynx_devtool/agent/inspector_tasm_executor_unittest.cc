@@ -489,6 +489,45 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsAccessibilityValueCase) {
   EXPECT_EQ(slider_node["value"]["value"], "50%");
 }
 
+TEST_F(InspectorTasmExecutorTest,
+       GetFullAXTreeReturnsRoleDescriptionPropertyCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto tab = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(tab.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      tab.get(), "accessibility-label", "Inbox");
+  lynx::devtool::ElementInspector::UpdateAttr(
+      tab.get(), "accessibility-role-description", "tab");
+
+  root->AddChildAt(tab, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 33;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 33);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+  EXPECT_TRUE(res["result"]["nodes"][0]["properties"].isNull());
+
+  const Json::Value& tab_node = res["result"]["nodes"][1];
+  ASSERT_TRUE(tab_node["properties"].isArray());
+  ASSERT_EQ(tab_node["properties"].size(), 1U);
+  EXPECT_EQ(tab_node["properties"][0]["name"], "roledescription");
+  EXPECT_EQ(tab_node["properties"][0]["value"]["type"], "string");
+  EXPECT_EQ(tab_node["properties"][0]["value"]["value"], "tab");
+}
+
 TEST_F(InspectorTasmExecutorTest, GetChildAXNodesReturnsDirectChildrenCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(
@@ -1211,6 +1250,50 @@ TEST_F(InspectorTasmExecutorTest,
   ASSERT_TRUE(reader.parse(
       devtool::MockReceiver::GetInstance().received_message_.second, res));
   EXPECT_EQ(res["method"], "DOM.attributeModified");
+}
+
+TEST_F(InspectorTasmExecutorTest,
+       AccessibilityNodesUpdatedFollowsRoleDescriptionCase) {
+  auto element = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(element.get()));
+  element->CreateElementContainer(false);
+  element_executor_->element_root_ = element.get();
+  devtool_mediator_->default_task_runner_ = ui_thread_->GetTaskRunner();
+  devtool_mediator_->devtool_executor_ =
+      std::make_shared<devtool::InspectorDefaultExecutor>(devtool_mediator_);
+
+  Json::Value enable_message(Json::ValueType::objectValue);
+  enable_message["id"] = 34;
+  devtool_mediator_->AccessibilityEnable(message_sender_, enable_message);
+  FlushDevtoolTasks();
+
+  Json::Value root_message(Json::ValueType::objectValue);
+  root_message["id"] = 35;
+  element_executor_->GetRootAXNode(message_sender_, root_message);
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  int node_id = devtool::ElementInspector::NodeId(element.get());
+  lynx::devtool::ElementInspector::UpdateAttr(
+      element.get(), "accessibility-role-description", "tab");
+  element_executor_->SendDOMEventMsg(
+      devtool::InspectorTasmExecutor::DomCdpEvent::ATTRIBUTE_MODIFIED, node_id,
+      "accessibility-role-description", -1);
+  FlushDevtoolTasks();
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "Accessibility.nodesUpdated");
+  ASSERT_TRUE(res["params"]["nodes"].isArray());
+  ASSERT_EQ(res["params"]["nodes"].size(), 1U);
+  ASSERT_TRUE(res["params"]["nodes"][0]["properties"].isArray());
+  ASSERT_EQ(res["params"]["nodes"][0]["properties"].size(), 1U);
+  EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["name"],
+            "roledescription");
+  EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["value"],
+            "tab");
 }
 
 TEST_F(InspectorTasmExecutorTest, SearchProtocolUsesStringSearchIdCase) {
