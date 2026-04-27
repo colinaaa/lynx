@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <cctype>
 #include <string>
+#include <vector>
 
+#include "base/include/value/array.h"
 #include "devtool/lynx_devtool/element/element_inspector.h"
 
 namespace lynx {
@@ -16,6 +18,7 @@ namespace devtool {
 namespace {
 
 constexpr const char* kAccessibilityElement = "accessibility-element";
+constexpr const char* kAccessibilityActions = "accessibility-actions";
 constexpr const char* kAccessibilityElementsHidden =
     "accessibility-elements-hidden";
 constexpr const char* kAccessibilityHeading = "accessibility-heading";
@@ -46,6 +49,19 @@ Json::Value BuildAXStringProperty(const std::string& name,
   Json::Value property(Json::ValueType::objectValue);
   property["name"] = name;
   property["value"] = BuildAXValue("string", value);
+  return property;
+}
+
+Json::Value BuildAXTokenListProperty(const std::string& name,
+                                     const std::vector<std::string>& values) {
+  Json::Value property(Json::ValueType::objectValue);
+  property["name"] = name;
+  property["value"]["type"] = "tokenList";
+  Json::Value token_list(Json::ValueType::arrayValue);
+  for (const auto& value : values) {
+    token_list.append(value);
+  }
+  property["value"]["value"] = token_list;
   return property;
 }
 
@@ -103,6 +119,78 @@ bool IsTrueAttribute(const std::string& value) {
 bool IsFalseAttribute(const std::string& value) {
   std::string normalized = ToLower(value);
   return normalized == "false" || normalized == "0";
+}
+
+std::string Trim(const std::string& value) {
+  size_t start = 0;
+  while (start < value.size() &&
+         std::isspace(static_cast<unsigned char>(value[start]))) {
+    ++start;
+  }
+  size_t end = value.size();
+  while (end > start &&
+         std::isspace(static_cast<unsigned char>(value[end - 1]))) {
+    --end;
+  }
+  return value.substr(start, end - start);
+}
+
+void AppendCommaSeparatedTokens(const std::string& value,
+                                std::vector<std::string>& tokens) {
+  size_t start = 0;
+  while (start <= value.size()) {
+    size_t end = value.find(',', start);
+    if (end == std::string::npos) {
+      end = value.size();
+    }
+    std::string token = Trim(value.substr(start, end - start));
+    if (!token.empty()) {
+      tokens.push_back(token);
+    }
+    if (end == value.size()) {
+      break;
+    }
+    start = end + 1;
+  }
+}
+
+std::vector<std::string> GetStringArrayAttribute(Element* element,
+                                                 const std::string& name) {
+  std::vector<std::string> values;
+  if (!element) {
+    return values;
+  }
+
+  std::string string_value = GetAttribute(element, name);
+  if (!string_value.empty()) {
+    AppendCommaSeparatedTokens(string_value, values);
+    return values;
+  }
+
+  auto* node = element->data_model();
+  if (!node) {
+    return values;
+  }
+  for (const auto& attribute : node->attributes()) {
+    if (attribute.first.str() != name || !attribute.second.IsArray()) {
+      continue;
+    }
+    auto array = attribute.second.Array();
+    if (!array) {
+      return values;
+    }
+    for (size_t i = 0; i < array->size(); ++i) {
+      const auto& item = array->get(i);
+      if (item.IsString()) {
+        std::string token = Trim(item.StdString());
+        if (!token.empty()) {
+          values.push_back(token);
+        }
+      }
+    }
+    return values;
+  }
+  return values;
 }
 
 std::string GetRole(Element* element) {
@@ -168,6 +256,7 @@ std::string GetAccessibleName(Element* element) {
 
 bool HasAXSemantics(Element* element) {
   return IsTrueAttribute(GetAttribute(element, kAccessibilityElement)) ||
+         !GetStringArrayAttribute(element, kAccessibilityActions).empty() ||
          IsTrueAttribute(GetAttribute(element, kAccessibilityHeading)) ||
          !GetAttribute(element, kAccessibilityLabel).empty() ||
          !GetAttribute(element, kAccessibilityRoleDescription).empty() ||
@@ -219,6 +308,12 @@ Json::Value BuildProperties(Element* element) {
   }
   if (HasTrait(traits, "selected")) {
     properties.append(BuildAXBooleanProperty("selected", true));
+  }
+
+  std::vector<std::string> actions =
+      GetStringArrayAttribute(element, kAccessibilityActions);
+  if (!actions.empty()) {
+    properties.append(BuildAXTokenListProperty("actions", actions));
   }
 
   return properties;

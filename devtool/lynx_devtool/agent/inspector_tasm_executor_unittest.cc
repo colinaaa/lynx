@@ -13,6 +13,7 @@
 #include <future>
 #include <memory>
 
+#include "base/include/value/array.h"
 #include "core/renderer/dom/element.h"
 #include "core/renderer/dom/element_manager.h"
 #include "core/renderer/tasm/react/testing/mock_painting_context.h"
@@ -546,6 +547,48 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsAccessibilityValueCase) {
   EXPECT_EQ(slider_node["name"]["value"], "Volume");
   EXPECT_EQ(slider_node["value"]["type"], "string");
   EXPECT_EQ(slider_node["value"]["value"], "50%");
+}
+
+TEST_F(InspectorTasmExecutorTest,
+       GetFullAXTreeReturnsAccessibilityActionsPropertyCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto action = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(action.get()));
+  auto actions = lynx::lepus::CArray::Create();
+  actions->push_back(lynx::lepus::Value("activate"));
+  actions->push_back(lynx::lepus::Value("dismiss"));
+  action->SetAttribute("accessibility-actions", lynx::lepus::Value(actions));
+
+  root->AddChildAt(action, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 42;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 42);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+
+  const Json::Value& action_node = res["result"]["nodes"][1];
+  EXPECT_FALSE(action_node["ignored"].asBool());
+  ASSERT_TRUE(action_node["properties"].isArray());
+  ASSERT_EQ(action_node["properties"].size(), 1U);
+  EXPECT_EQ(action_node["properties"][0]["name"], "actions");
+  EXPECT_EQ(action_node["properties"][0]["value"]["type"], "tokenList");
+  ASSERT_TRUE(action_node["properties"][0]["value"]["value"].isArray());
+  ASSERT_EQ(action_node["properties"][0]["value"]["value"].size(), 2U);
+  EXPECT_EQ(action_node["properties"][0]["value"]["value"][0], "activate");
+  EXPECT_EQ(action_node["properties"][0]["value"]["value"][1], "dismiss");
 }
 
 TEST_F(InspectorTasmExecutorTest,
@@ -1459,6 +1502,57 @@ TEST_F(InspectorTasmExecutorTest,
             "roledescription");
   EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["value"],
             "tab");
+}
+
+TEST_F(InspectorTasmExecutorTest,
+       AccessibilityNodesUpdatedFollowsActionsCase) {
+  auto element = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(element.get()));
+  element->CreateElementContainer(false);
+  element_executor_->element_root_ = element.get();
+  devtool_mediator_->default_task_runner_ = ui_thread_->GetTaskRunner();
+  devtool_mediator_->devtool_executor_ =
+      std::make_shared<devtool::InspectorDefaultExecutor>(devtool_mediator_);
+
+  Json::Value enable_message(Json::ValueType::objectValue);
+  enable_message["id"] = 43;
+  devtool_mediator_->AccessibilityEnable(message_sender_, enable_message);
+  FlushDevtoolTasks();
+
+  Json::Value root_message(Json::ValueType::objectValue);
+  root_message["id"] = 44;
+  element_executor_->GetRootAXNode(message_sender_, root_message);
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  int node_id = devtool::ElementInspector::NodeId(element.get());
+  lynx::devtool::ElementInspector::UpdateAttr(
+      element.get(), "accessibility-actions", "activate,dismiss");
+  element_executor_->SendDOMEventMsg(
+      devtool::InspectorTasmExecutor::DomCdpEvent::ATTRIBUTE_MODIFIED, node_id,
+      "accessibility-actions", -1);
+  FlushDevtoolTasks();
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "Accessibility.nodesUpdated");
+  ASSERT_TRUE(res["params"]["nodes"].isArray());
+  ASSERT_EQ(res["params"]["nodes"].size(), 1U);
+  ASSERT_TRUE(res["params"]["nodes"][0]["properties"].isArray());
+  ASSERT_EQ(res["params"]["nodes"][0]["properties"].size(), 1U);
+  EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["name"], "actions");
+  EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["type"],
+            "tokenList");
+  ASSERT_TRUE(
+      res["params"]["nodes"][0]["properties"][0]["value"]["value"].isArray());
+  ASSERT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["value"].size(),
+            2U);
+  EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["value"][0],
+            "activate");
+  EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["value"][1],
+            "dismiss");
 }
 
 TEST_F(InspectorTasmExecutorTest,
