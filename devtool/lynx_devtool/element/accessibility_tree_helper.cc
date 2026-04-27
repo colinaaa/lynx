@@ -213,6 +213,14 @@ Json::Value BuildProperties(Element* element) {
         BuildAXStringProperty("roledescription", role_description));
   }
 
+  std::string traits = GetAttribute(element, kAccessibilityTraits);
+  if (HasTrait(traits, "disabled")) {
+    properties.append(BuildAXBooleanProperty("disabled", true));
+  }
+  if (HasTrait(traits, "selected")) {
+    properties.append(BuildAXBooleanProperty("selected", true));
+  }
+
   return properties;
 }
 

@@ -587,6 +587,48 @@ TEST_F(InspectorTasmExecutorTest,
   EXPECT_EQ(tab_node["properties"][0]["value"]["value"], "tab");
 }
 
+TEST_F(InspectorTasmExecutorTest,
+       GetFullAXTreeReturnsTraitStatePropertiesCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto option = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(option.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      option.get(), "accessibility-label", "Option");
+  lynx::devtool::ElementInspector::UpdateAttr(
+      option.get(), "accessibility-traits", "button,selected,disabled");
+
+  root->AddChildAt(option, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 40;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 40);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+
+  const Json::Value& option_node = res["result"]["nodes"][1];
+  EXPECT_EQ(option_node["role"]["value"], "button");
+  ASSERT_TRUE(option_node["properties"].isArray());
+  ASSERT_EQ(option_node["properties"].size(), 2U);
+  EXPECT_EQ(option_node["properties"][0]["name"], "disabled");
+  EXPECT_EQ(option_node["properties"][0]["value"]["type"], "boolean");
+  EXPECT_TRUE(option_node["properties"][0]["value"]["value"].asBool());
+  EXPECT_EQ(option_node["properties"][1]["name"], "selected");
+  EXPECT_EQ(option_node["properties"][1]["value"]["type"], "boolean");
+  EXPECT_TRUE(option_node["properties"][1]["value"]["value"].asBool());
+}
+
 TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsHeadingRoleCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(
