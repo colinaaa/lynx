@@ -18,6 +18,7 @@ namespace {
 constexpr const char* kAccessibilityElement = "accessibility-element";
 constexpr const char* kAccessibilityElementsHidden =
     "accessibility-elements-hidden";
+constexpr const char* kAccessibilityHeading = "accessibility-heading";
 constexpr const char* kAccessibilityLabel = "accessibility-label";
 constexpr const char* kAccessibilityRoleDescription =
     "accessibility-role-description";
@@ -120,6 +121,9 @@ std::string GetRole(Element* element) {
     return "link";
   }
   if (HasTrait(traits, "header")) {
+    return "heading";
+  }
+  if (IsTrueAttribute(GetAttribute(element, kAccessibilityHeading))) {
     return "heading";
   }
   if (HasTrait(traits, "searchfield")) {

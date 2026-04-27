@@ -528,6 +528,38 @@ TEST_F(InspectorTasmExecutorTest,
   EXPECT_EQ(tab_node["properties"][0]["value"]["value"], "tab");
 }
 
+TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsHeadingRoleCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto heading = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(heading.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      heading.get(), "accessibility-label", "Section");
+  lynx::devtool::ElementInspector::UpdateAttr(
+      heading.get(), "accessibility-heading", "true");
+
+  root->AddChildAt(heading, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 36;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 36);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+  EXPECT_EQ(res["result"]["nodes"][1]["role"]["value"], "heading");
+  EXPECT_EQ(res["result"]["nodes"][1]["name"]["value"], "Section");
+}
+
 TEST_F(InspectorTasmExecutorTest, GetChildAXNodesReturnsDirectChildrenCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(
@@ -1294,6 +1326,51 @@ TEST_F(InspectorTasmExecutorTest,
             "roledescription");
   EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["value"],
             "tab");
+}
+
+TEST_F(InspectorTasmExecutorTest,
+       AccessibilityNodesUpdatedFollowsHeadingCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto element = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(element.get()));
+  element->CreateElementContainer(false);
+  root->AddChildAt(element, 0);
+  element_executor_->element_root_ = root.get();
+  devtool_mediator_->default_task_runner_ = ui_thread_->GetTaskRunner();
+  devtool_mediator_->devtool_executor_ =
+      std::make_shared<devtool::InspectorDefaultExecutor>(devtool_mediator_);
+
+  Json::Value enable_message(Json::ValueType::objectValue);
+  enable_message["id"] = 37;
+  devtool_mediator_->AccessibilityEnable(message_sender_, enable_message);
+  FlushDevtoolTasks();
+
+  Json::Value tree_message(Json::ValueType::objectValue);
+  tree_message["id"] = 38;
+  tree_message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, tree_message);
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  int node_id = devtool::ElementInspector::NodeId(element.get());
+  lynx::devtool::ElementInspector::UpdateAttr(
+      element.get(), "accessibility-heading", "true");
+  element_executor_->SendDOMEventMsg(
+      devtool::InspectorTasmExecutor::DomCdpEvent::ATTRIBUTE_MODIFIED, node_id,
+      "accessibility-heading", -1);
+  FlushDevtoolTasks();
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "Accessibility.nodesUpdated");
+  ASSERT_TRUE(res["params"]["nodes"].isArray());
+  ASSERT_EQ(res["params"]["nodes"].size(), 1U);
+  EXPECT_EQ(res["params"]["nodes"][0]["role"]["value"], "heading");
 }
 
 TEST_F(InspectorTasmExecutorTest, SearchProtocolUsesStringSearchIdCase) {
