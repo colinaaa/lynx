@@ -593,6 +593,27 @@ void InspectorTasmExecutor::GetFullAXTree(
   sender->SendMessage("CDP", response);
 }
 
+void InspectorTasmExecutor::GetAXNodeAndAncestors(
+    const std::shared_ptr<lynx::devtool::MessageSender>& sender,
+    const Json::Value& message) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value content(Json::ValueType::objectValue);
+  Json::Value nodes(Json::ValueType::arrayValue);
+  Json::Value params = message["params"];
+  int node_id = GetAXTreeRequestNodeId(params);
+  Element* element = GetElementById(node_id);
+  std::set<int> visited;
+
+  for (Element* current = element; current; current = current->parent()) {
+    AppendAXNodeIfNeeded(current, visited, nodes);
+  }
+
+  content["nodes"] = nodes;
+  response["result"] = content;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
+}
+
 void InspectorTasmExecutor::GetChildAXNodes(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {

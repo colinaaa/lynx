@@ -536,6 +536,52 @@ TEST_F(InspectorTasmExecutorTest,
             std::to_string(devtool::ElementInspector::NodeId(child.get())));
 }
 
+TEST_F(InspectorTasmExecutorTest, GetAXNodeAndAncestorsReturnsParentChainCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto parent = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(parent.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      parent.get(), "accessibility-label", "Parent label");
+
+  auto target = manager_->CreateFiberElement("text");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(target.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(target.get(), "text",
+                                              "Target label");
+
+  root->AddChildAt(parent, 0);
+  parent->AddChildAt(target, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 14;
+  message["params"]["nodeId"] = devtool::ElementInspector::NodeId(target.get());
+  element_executor_->GetAXNodeAndAncestors(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 14);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 3U);
+  EXPECT_EQ(res["result"]["nodes"][0]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(target.get())));
+  EXPECT_EQ(res["result"]["nodes"][0]["parentId"],
+            std::to_string(devtool::ElementInspector::NodeId(parent.get())));
+  EXPECT_EQ(res["result"]["nodes"][0]["name"]["value"], "Target label");
+  EXPECT_EQ(res["result"]["nodes"][1]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(parent.get())));
+  EXPECT_EQ(res["result"]["nodes"][1]["parentId"],
+            std::to_string(devtool::ElementInspector::NodeId(root.get())));
+  EXPECT_EQ(res["result"]["nodes"][2]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(root.get())));
+}
+
 TEST_F(InspectorTasmExecutorTest, DescribeNodeByNodeIdCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(
