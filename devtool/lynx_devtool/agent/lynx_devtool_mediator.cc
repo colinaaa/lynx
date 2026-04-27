@@ -44,6 +44,13 @@ void SendAccessibilityEnableRequiredError(
   sender->SendMessage("CDP", response);
 }
 
+void ClearRequestedAXNodes(
+    const std::shared_ptr<InspectorTasmExecutor>& element_executor) {
+  if (element_executor) {
+    element_executor->ClearRequestedAXNodes();
+  }
+}
+
 }  // namespace
 
 LynxDevToolMediator::LynxDevToolMediator() { view_id_ = GenerateViewId(); }
@@ -1100,6 +1107,13 @@ void LynxDevToolMediator::AccessibilityDisable(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
   accessibility_enabled_.store(false);
+  if (tasm_task_runner_) {
+    RunOnTaskRunner(tasm_task_runner_, [element_executor = element_executor_] {
+      ClearRequestedAXNodes(element_executor);
+    });
+  } else {
+    ClearRequestedAXNodes(element_executor_);
+  }
   RunOnDevToolThread([sender, message, executor = devtool_executor_] {
     executor->AccessibilityDisable(sender, message);
   });

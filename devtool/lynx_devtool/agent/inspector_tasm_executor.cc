@@ -246,6 +246,7 @@ void InspectorTasmExecutor::SendDOMEventMsg(const DomCdpEvent& event_name,
 }
 
 void InspectorTasmExecutor::OnDocumentUpdated() {
+  ClearRequestedAXNodes();
   SendDOMEventMsg(DomCdpEvent::DOCUMENT_UPDATED, -1, "", -1);
 
   auto devtool_mediator = devtool_mediator_wp_.lock();
@@ -551,6 +552,10 @@ lynx::tasm::Element* InspectorTasmExecutor::GetElementById(int node_id) {
 
 lynx::tasm::Element* InspectorTasmExecutor::GetElementRoot() {
   return element_root_;
+}
+
+void InspectorTasmExecutor::ClearRequestedAXNodes() {
+  requested_ax_node_ids_.clear();
 }
 
 void InspectorTasmExecutor::QuerySelector(

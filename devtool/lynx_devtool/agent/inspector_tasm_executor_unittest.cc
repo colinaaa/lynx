@@ -1147,6 +1147,72 @@ TEST_F(InspectorTasmExecutorTest,
   EXPECT_EQ(res["params"]["nodes"][0]["name"]["value"], "");
 }
 
+TEST_F(InspectorTasmExecutorTest,
+       AccessibilityRequestedNodesResetWithSessionStateCase) {
+  auto element = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(element.get()));
+  element->CreateElementContainer(false);
+  element_executor_->element_root_ = element.get();
+  devtool_mediator_->element_executor_ = element_executor_;
+  devtool_mediator_->default_task_runner_ = ui_thread_->GetTaskRunner();
+  devtool_mediator_->devtool_executor_ =
+      std::make_shared<devtool::InspectorDefaultExecutor>(devtool_mediator_);
+
+  Json::Value enable_message(Json::ValueType::objectValue);
+  enable_message["id"] = 28;
+  devtool_mediator_->AccessibilityEnable(message_sender_, enable_message);
+  FlushDevtoolTasks();
+
+  Json::Value root_message(Json::ValueType::objectValue);
+  root_message["id"] = 29;
+  element_executor_->GetRootAXNode(message_sender_, root_message);
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  Json::Value disable_message(Json::ValueType::objectValue);
+  disable_message["id"] = 30;
+  devtool_mediator_->AccessibilityDisable(message_sender_, disable_message);
+  FlushDevtoolTasks();
+
+  enable_message["id"] = 31;
+  devtool_mediator_->AccessibilityEnable(message_sender_, enable_message);
+  FlushDevtoolTasks();
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  int node_id = devtool::ElementInspector::NodeId(element.get());
+  lynx::devtool::ElementInspector::UpdateAttr(
+      element.get(), "accessibility-label", "After reenable");
+  element_executor_->SendDOMEventMsg(
+      devtool::InspectorTasmExecutor::DomCdpEvent::ATTRIBUTE_MODIFIED, node_id,
+      "accessibility-label", -1);
+  FlushDevtoolTasks();
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "DOM.attributeModified");
+
+  root_message["id"] = 32;
+  element_executor_->GetRootAXNode(message_sender_, root_message);
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  element_executor_->OnDocumentUpdated();
+  FlushDevtoolTasks();
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  lynx::devtool::ElementInspector::UpdateAttr(
+      element.get(), "accessibility-label", "After document update");
+  element_executor_->SendDOMEventMsg(
+      devtool::InspectorTasmExecutor::DomCdpEvent::ATTRIBUTE_MODIFIED, node_id,
+      "accessibility-label", -1);
+  FlushDevtoolTasks();
+
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "DOM.attributeModified");
+}
+
 TEST_F(InspectorTasmExecutorTest, SearchProtocolUsesStringSearchIdCase) {
   auto element = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(

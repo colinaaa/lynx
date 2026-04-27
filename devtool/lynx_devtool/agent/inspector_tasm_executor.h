@@ -185,6 +185,7 @@ class InspectorTasmExecutor
  public:
   lynx::tasm::Element* GetElementById(int node_id);
   lynx::tasm::Element* GetElementRoot();
+  void ClearRequestedAXNodes();
   Json::Value GetUsageItem(const std::string& stylesheet_id,
                            const std::string& content,
                            const std::string& selector);
