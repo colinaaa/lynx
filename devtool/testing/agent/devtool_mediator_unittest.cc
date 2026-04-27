@@ -7,8 +7,11 @@
 #define private public
 #define protected public
 
+#include <future>
 #include <memory>
+#include <string>
 #include <thread>
+#include <vector>
 
 #include "base/include/log/logging.h"
 #include "core/renderer/dom/fiber/block_element.h"
@@ -70,6 +73,13 @@ class DevToolMediatorTest : public ::testing::Test {
     devtool_mediator_->default_task_runner_ = devtool_thread_->GetTaskRunner();
   }
 
+  void FlushTasmTasks() {
+    std::promise<void> p;
+    auto f = p.get_future();
+    devtool_mediator_->RunOnTASMThread([&p]() { p.set_value(); }, true);
+    f.wait();
+  }
+
  private:
   std::shared_ptr<devtool::LynxDevToolMediator> devtool_mediator_;
   std::shared_ptr<devtool::MessageSender> message_sender_;
@@ -80,6 +90,44 @@ class DevToolMediatorTest : public ::testing::Test {
   std::unique_ptr<fml::Thread> devtool_thread_;
   std::unique_ptr<fml::Thread> cdp_event_listener_thread_;
 };
+
+TEST_F(DevToolMediatorTest,
+       AccessibilityEnableRequiredMethodsReturnErrorWhenDisabled) {
+  struct RequestCase {
+    std::string method;
+    void (devtool::LynxDevToolMediator::*call)(
+        const std::shared_ptr<devtool::MessageSender>&, const Json::Value&);
+  };
+  const std::vector<RequestCase> request_cases = {
+      {"Accessibility.getAXNodeAndAncestors",
+       &devtool::LynxDevToolMediator::GetAXNodeAndAncestors},
+      {"Accessibility.getChildAXNodes",
+       &devtool::LynxDevToolMediator::GetChildAXNodes},
+      {"Accessibility.getRootAXNode",
+       &devtool::LynxDevToolMediator::GetRootAXNode},
+  };
+
+  for (size_t i = 0; i < request_cases.size(); ++i) {
+    devtool::MockReceiver::GetInstance().ResetAll();
+    Json::Value message(Json::ValueType::objectValue);
+    message["id"] = static_cast<int>(i + 1);
+    message["method"] = request_cases[i].method;
+
+    (devtool_mediator_.get()->*request_cases[i].call)(message_sender_,
+                                                      message);
+    FlushTasmTasks();
+
+    Json::Value response;
+    Json::Reader reader;
+    ASSERT_TRUE(reader.parse(
+        devtool::MockReceiver::GetInstance().received_message_.second,
+        response));
+    EXPECT_EQ(response["id"].asInt(), static_cast<int>(i + 1));
+    EXPECT_EQ(response["error"]["code"].asInt(), devtool::kServerError);
+    EXPECT_EQ(response["error"]["message"].asString(),
+              request_cases[i].method + " requires Accessibility.enable");
+  }
+}
 
 TEST_F(DevToolMediatorTest, InspectorEnableCase) {
   LOGI("InspectorEnableCase start");

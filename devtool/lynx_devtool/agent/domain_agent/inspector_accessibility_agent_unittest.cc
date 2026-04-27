@@ -79,6 +79,12 @@ TEST_F(InspectorAccessibilityAgentTest, EnableAndDisableReturnSuccess) {
 }
 
 TEST_F(InspectorAccessibilityAgentTest, DispatchesMethodsToDefaultFallback) {
+  Json::Value enable_message(Json::ValueType::objectValue);
+  enable_message["id"] = 100;
+  enable_message["method"] = "Accessibility.enable";
+  agent_->CallMethod(devtool_->message_sender_, enable_message);
+  WaitForMessage();
+
   const std::string methods[] = {
       "Accessibility.getAXNodeAndAncestors", "Accessibility.getChildAXNodes",
       "Accessibility.getFullAXTree",         "Accessibility.getPartialAXTree",

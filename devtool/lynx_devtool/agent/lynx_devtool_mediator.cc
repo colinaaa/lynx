@@ -32,6 +32,18 @@ int GenerateViewId() {
   return (*id)++;
 }
 
+void SendAccessibilityEnableRequiredError(
+    const std::shared_ptr<MessageSender>& sender, const Json::Value& message,
+    const std::string& method) {
+  Json::Value response(Json::ValueType::objectValue);
+  Json::Value error(Json::ValueType::objectValue);
+  error["code"] = kServerError;
+  error["message"] = method + " requires Accessibility.enable";
+  response["error"] = error;
+  response["id"] = message["id"].asInt64();
+  sender->SendMessage("CDP", response);
+}
+
 }  // namespace
 
 LynxDevToolMediator::LynxDevToolMediator() { view_id_ = GenerateViewId(); }
@@ -1096,6 +1108,12 @@ void LynxDevToolMediator::AccessibilityDisable(
 void LynxDevToolMediator::GetAXNodeAndAncestors(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  if (!IsAccessibilityEnabled()) {
+    SendAccessibilityEnableRequiredError(
+        sender, message, "Accessibility.getAXNodeAndAncestors");
+    return;
+  }
+
   if (tasm_task_runner_) {
     RunOnTaskRunner(tasm_task_runner_,
                     [element_executor = element_executor_, sender, message]() {
@@ -1112,6 +1130,12 @@ void LynxDevToolMediator::GetAXNodeAndAncestors(
 void LynxDevToolMediator::GetChildAXNodes(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  if (!IsAccessibilityEnabled()) {
+    SendAccessibilityEnableRequiredError(sender, message,
+                                         "Accessibility.getChildAXNodes");
+    return;
+  }
+
   if (tasm_task_runner_) {
     RunOnTaskRunner(tasm_task_runner_,
                     [element_executor = element_executor_, sender, message]() {
@@ -1160,6 +1184,12 @@ void LynxDevToolMediator::GetPartialAXTree(
 void LynxDevToolMediator::GetRootAXNode(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  if (!IsAccessibilityEnabled()) {
+    SendAccessibilityEnableRequiredError(sender, message,
+                                         "Accessibility.getRootAXNode");
+    return;
+  }
+
   if (tasm_task_runner_) {
     RunOnTaskRunner(tasm_task_runner_,
                     [element_executor = element_executor_, sender, message]() {
