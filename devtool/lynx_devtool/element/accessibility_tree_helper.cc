@@ -25,6 +25,7 @@ constexpr const char* kAccessibilityHeading = "accessibility-heading";
 constexpr const char* kAccessibilityLabel = "accessibility-label";
 constexpr const char* kAccessibilityRoleDescription =
     "accessibility-role-description";
+constexpr const char* kAccessibilityStatus = "accessibility-status";
 constexpr const char* kAccessibilityTraits = "accessibility-traits";
 constexpr const char* kAccessibilityValue = "accessibility-value";
 constexpr const char* kText = "text";
@@ -231,27 +232,38 @@ std::string GetRole(Element* element) {
   return "generic";
 }
 
+std::string ApplyAccessibilityStatus(Element* element, const std::string& name) {
+  std::string status = GetAttribute(element, kAccessibilityStatus);
+  if (status.empty()) {
+    return name;
+  }
+  if (name.empty()) {
+    return status;
+  }
+  return status + ", " + name;
+}
+
 std::string GetAccessibleName(Element* element) {
   std::string label = GetAttribute(element, kAccessibilityLabel);
   if (!label.empty()) {
-    return label;
+    return ApplyAccessibilityStatus(element, label);
   }
 
   std::string text = GetAttribute(element, kText);
   if (!text.empty()) {
-    return text;
+    return ApplyAccessibilityStatus(element, text);
   }
 
   std::string role = GetRole(element);
   if (role == "generic" || role == "RootWebArea") {
-    return "";
+    return ApplyAccessibilityStatus(element, "");
   }
 
   std::string child_name;
   for (Element* child : element->GetChildren()) {
     child_name += GetAccessibleName(child);
   }
-  return child_name;
+  return ApplyAccessibilityStatus(element, child_name);
 }
 
 bool HasAXSemantics(Element* element) {
@@ -260,6 +272,7 @@ bool HasAXSemantics(Element* element) {
          IsTrueAttribute(GetAttribute(element, kAccessibilityHeading)) ||
          !GetAttribute(element, kAccessibilityLabel).empty() ||
          !GetAttribute(element, kAccessibilityRoleDescription).empty() ||
+         !GetAttribute(element, kAccessibilityStatus).empty() ||
          !GetAttribute(element, kAccessibilityTraits).empty() ||
          !GetAttribute(element, kAccessibilityValue).empty() ||
          !GetAttribute(element, kText).empty();

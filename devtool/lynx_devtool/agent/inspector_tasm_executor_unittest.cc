@@ -550,6 +550,48 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsAccessibilityValueCase) {
 }
 
 TEST_F(InspectorTasmExecutorTest,
+       GetFullAXTreeReturnsAccessibilityStatusNameCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto checkbox = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(checkbox.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      checkbox.get(), "accessibility-label", "Notifications");
+  lynx::devtool::ElementInspector::UpdateAttr(
+      checkbox.get(), "accessibility-status", "Checked");
+
+  auto status = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(status.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      status.get(), "accessibility-status", "Busy");
+
+  root->AddChildAt(checkbox, 0);
+  root->AddChildAt(status, 1);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 45;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 45);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 3U);
+  EXPECT_EQ(res["result"]["nodes"][1]["name"]["value"],
+            "Checked, Notifications");
+  EXPECT_FALSE(res["result"]["nodes"][2]["ignored"].asBool());
+  EXPECT_EQ(res["result"]["nodes"][2]["name"]["value"], "Busy");
+}
+
+TEST_F(InspectorTasmExecutorTest,
        GetFullAXTreeReturnsAccessibilityActionsPropertyCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(
@@ -1553,6 +1595,49 @@ TEST_F(InspectorTasmExecutorTest,
             "activate");
   EXPECT_EQ(res["params"]["nodes"][0]["properties"][0]["value"]["value"][1],
             "dismiss");
+}
+
+TEST_F(InspectorTasmExecutorTest,
+       AccessibilityNodesUpdatedFollowsStatusCase) {
+  auto element = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(element.get()));
+  element->CreateElementContainer(false);
+  lynx::devtool::ElementInspector::UpdateAttr(
+      element.get(), "accessibility-label", "Notifications");
+  element_executor_->element_root_ = element.get();
+  devtool_mediator_->default_task_runner_ = ui_thread_->GetTaskRunner();
+  devtool_mediator_->devtool_executor_ =
+      std::make_shared<devtool::InspectorDefaultExecutor>(devtool_mediator_);
+
+  Json::Value enable_message(Json::ValueType::objectValue);
+  enable_message["id"] = 46;
+  devtool_mediator_->AccessibilityEnable(message_sender_, enable_message);
+  FlushDevtoolTasks();
+
+  Json::Value root_message(Json::ValueType::objectValue);
+  root_message["id"] = 47;
+  element_executor_->GetRootAXNode(message_sender_, root_message);
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  int node_id = devtool::ElementInspector::NodeId(element.get());
+  lynx::devtool::ElementInspector::UpdateAttr(
+      element.get(), "accessibility-status", "Checked");
+  element_executor_->SendDOMEventMsg(
+      devtool::InspectorTasmExecutor::DomCdpEvent::ATTRIBUTE_MODIFIED, node_id,
+      "accessibility-status", -1);
+  FlushDevtoolTasks();
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "Accessibility.nodesUpdated");
+  ASSERT_TRUE(res["params"]["nodes"].isArray());
+  ASSERT_EQ(res["params"]["nodes"].size(), 1U);
+  EXPECT_EQ(res["params"]["nodes"][0]["nodeId"], std::to_string(node_id));
+  EXPECT_EQ(res["params"]["nodes"][0]["name"]["value"],
+            "Checked, Notifications");
 }
 
 TEST_F(InspectorTasmExecutorTest,

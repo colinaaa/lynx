@@ -56,6 +56,7 @@ bool IsAXNodeAttribute(const std::string& name) {
          name == "accessibility-heading" ||
          name == "accessibility-label" ||
          name == "accessibility-role-description" ||
+         name == "accessibility-status" ||
          name == "accessibility-traits" ||
          name == "accessibility-value" || name == "text";
 }
