@@ -661,6 +661,38 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsHeadingRoleCase) {
   EXPECT_EQ(res["result"]["nodes"][1]["name"]["value"], "Section");
 }
 
+TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsSearchBoxRoleCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto search = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(search.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(
+      search.get(), "accessibility-label", "Search");
+  lynx::devtool::ElementInspector::UpdateAttr(
+      search.get(), "accessibility-traits", "search");
+
+  root->AddChildAt(search, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 41;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 41);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+  EXPECT_EQ(res["result"]["nodes"][1]["role"]["value"], "searchBox");
+  EXPECT_EQ(res["result"]["nodes"][1]["name"]["value"], "Search");
+}
+
 TEST_F(InspectorTasmExecutorTest, GetChildAXNodesReturnsDirectChildrenCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(

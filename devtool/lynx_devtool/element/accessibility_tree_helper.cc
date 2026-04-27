@@ -126,7 +126,7 @@ std::string GetRole(Element* element) {
   if (IsTrueAttribute(GetAttribute(element, kAccessibilityHeading))) {
     return "heading";
   }
-  if (HasTrait(traits, "searchfield")) {
+  if (HasTrait(traits, "search") || HasTrait(traits, "searchfield")) {
     return "searchBox";
   }
   if (HasTrait(traits, "text")) {
