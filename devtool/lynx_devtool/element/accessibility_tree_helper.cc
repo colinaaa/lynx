@@ -20,6 +20,7 @@ constexpr const char* kAccessibilityElementsHidden =
     "accessibility-elements-hidden";
 constexpr const char* kAccessibilityLabel = "accessibility-label";
 constexpr const char* kAccessibilityTraits = "accessibility-traits";
+constexpr const char* kAccessibilityValue = "accessibility-value";
 constexpr const char* kText = "text";
 
 Json::Value BuildAXValue(const std::string& type, const std::string& value) {
@@ -196,6 +197,10 @@ Json::Value AccessibilityTreeHelper::BuildAXNode(Element* element) {
   }
   node["role"] = BuildAXValue("role", GetRole(element));
   node["name"] = BuildAXValue("computedString", GetAccessibleName(element));
+  std::string value = GetAttribute(element, kAccessibilityValue);
+  if (!value.empty()) {
+    node["value"] = BuildAXValue("string", value);
+  }
   node["backendDOMNodeId"] = ElementInspector::NodeId(element);
 
   if (element->parent()) {

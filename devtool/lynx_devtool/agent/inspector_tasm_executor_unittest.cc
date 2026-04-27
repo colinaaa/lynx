@@ -453,6 +453,42 @@ TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsIgnoredReasonsCase) {
   EXPECT_TRUE(hidden_node["ignoredReasons"][1]["value"]["value"].asBool());
 }
 
+TEST_F(InspectorTasmExecutorTest, GetFullAXTreeReturnsAccessibilityValueCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+
+  auto slider = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(slider.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(slider.get(),
+                                              "accessibility-label", "Volume");
+  lynx::devtool::ElementInspector::UpdateAttr(slider.get(),
+                                              "accessibility-value", "50%");
+
+  root->AddChildAt(slider, 0);
+  element_executor_->element_root_ = root.get();
+
+  Json::Value message(Json::ValueType::objectValue);
+  message["id"] = 18;
+  message["params"]["depth"] = 1;
+  element_executor_->GetFullAXTree(message_sender_, message);
+
+  Json::Value res;
+  Json::Reader reader;
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["id"], 18);
+  ASSERT_TRUE(res["result"]["nodes"].isArray());
+  ASSERT_EQ(res["result"]["nodes"].size(), 2U);
+  EXPECT_TRUE(res["result"]["nodes"][0]["value"].isNull());
+
+  const Json::Value& slider_node = res["result"]["nodes"][1];
+  EXPECT_EQ(slider_node["name"]["value"], "Volume");
+  EXPECT_EQ(slider_node["value"]["type"], "string");
+  EXPECT_EQ(slider_node["value"]["value"], "50%");
+}
+
 TEST_F(InspectorTasmExecutorTest, GetChildAXNodesReturnsDirectChildrenCase) {
   auto root = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(
