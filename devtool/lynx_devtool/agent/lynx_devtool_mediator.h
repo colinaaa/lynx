@@ -5,6 +5,7 @@
 #ifndef DEVTOOL_LYNX_DEVTOOL_AGENT_LYNX_DEVTOOL_MEDIATOR_H_
 #define DEVTOOL_LYNX_DEVTOOL_AGENT_LYNX_DEVTOOL_MEDIATOR_H_
 
+#include <atomic>
 #include <memory>
 
 #include "base/include/fml/task_runner.h"
@@ -255,6 +256,7 @@ class LynxDevToolMediator
   void UpdateTarget();
 
   void SendLayerTreeDidChangeEvent();
+  bool IsAccessibilityEnabled() const;
 
   // implemented by ui executor
   void ScrollIntoView(int node_id);
@@ -280,6 +282,7 @@ class LynxDevToolMediator
   int view_id_{-1};
   bool fully_initialized_{false};
   bool attached_{false};
+  std::atomic<bool> accessibility_enabled_{false};
 
   std::unordered_map<std::string, std::shared_ptr<MessageSender>>
       cdp_event_listener_map_;

@@ -1078,6 +1078,7 @@ void LynxDevToolMediator::InspectorDetached(
 void LynxDevToolMediator::AccessibilityEnable(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  accessibility_enabled_.store(true);
   RunOnDevToolThread([sender, message, executor = devtool_executor_] {
     executor->AccessibilityEnable(sender, message);
   });
@@ -1086,6 +1087,7 @@ void LynxDevToolMediator::AccessibilityEnable(
 void LynxDevToolMediator::AccessibilityDisable(
     const std::shared_ptr<lynx::devtool::MessageSender>& sender,
     const Json::Value& message) {
+  accessibility_enabled_.store(false);
   RunOnDevToolThread([sender, message, executor = devtool_executor_] {
     executor->AccessibilityDisable(sender, message);
   });
@@ -1270,6 +1272,10 @@ void LynxDevToolMediator::SendLayerTreeDidChangeEvent() {
   RunOnUIThread([executor = element_executor_] {
     executor->SendLayerTreeDidChangeEvent();
   });
+}
+
+bool LynxDevToolMediator::IsAccessibilityEnabled() const {
+  return accessibility_enabled_.load();
 }
 
 void LynxDevToolMediator::CompositingReasons(

@@ -922,6 +922,54 @@ TEST_F(InspectorTasmExecutorTest, SendDOMEventMsgCase) {
   EXPECT_TRUE(res["params"].isObject());
 }
 
+TEST_F(InspectorTasmExecutorTest,
+       AccessibilityLoadCompleteFollowsEnableStateCase) {
+  auto root = manager_->CreateFiberElement("view");
+  lynx::devtool::ElementInspector::InitForInspector(
+      std::make_tuple(root.get()));
+  lynx::devtool::ElementInspector::UpdateAttr(root.get(), "accessibility-label",
+                                              "Root label");
+  element_executor_->element_root_ = root.get();
+  devtool_mediator_->default_task_runner_ = ui_thread_->GetTaskRunner();
+  devtool_mediator_->devtool_executor_ =
+      std::make_shared<devtool::InspectorDefaultExecutor>(devtool_mediator_);
+
+  Json::Reader reader;
+  Json::Value res;
+  element_executor_->OnDocumentUpdated();
+  FlushDevtoolTasks();
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "DOM.documentUpdated");
+
+  Json::Value enable_message(Json::ValueType::objectValue);
+  enable_message["id"] = 19;
+  devtool_mediator_->AccessibilityEnable(message_sender_, enable_message);
+  FlushDevtoolTasks();
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  element_executor_->OnDocumentUpdated();
+  FlushDevtoolTasks();
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "Accessibility.loadComplete");
+  EXPECT_EQ(res["params"]["root"]["nodeId"],
+            std::to_string(devtool::ElementInspector::NodeId(root.get())));
+  EXPECT_EQ(res["params"]["root"]["name"]["value"], "Root label");
+
+  Json::Value disable_message(Json::ValueType::objectValue);
+  disable_message["id"] = 20;
+  devtool_mediator_->AccessibilityDisable(message_sender_, disable_message);
+  FlushDevtoolTasks();
+  devtool::MockReceiver::GetInstance().received_message_ = {"", ""};
+
+  element_executor_->OnDocumentUpdated();
+  FlushDevtoolTasks();
+  ASSERT_TRUE(reader.parse(
+      devtool::MockReceiver::GetInstance().received_message_.second, res));
+  EXPECT_EQ(res["method"], "DOM.documentUpdated");
+}
+
 TEST_F(InspectorTasmExecutorTest, SearchProtocolUsesStringSearchIdCase) {
   auto element = manager_->CreateFiberElement("view");
   lynx::devtool::ElementInspector::InitForInspector(

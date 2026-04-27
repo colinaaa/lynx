@@ -173,8 +173,22 @@ void InspectorTasmExecutor::SendDOMEventMsg(const DomCdpEvent& event_name,
 }
 
 void InspectorTasmExecutor::OnDocumentUpdated() {
-  Json::Value msg(Json::ValueType::objectValue);
   SendDOMEventMsg(DomCdpEvent::DOCUMENT_UPDATED, -1, "", -1);
+
+  auto devtool_mediator = devtool_mediator_wp_.lock();
+  CHECK_NULL_AND_LOG_RETURN(devtool_mediator, "devtool_mediator is null");
+  if (!element_root_ || !devtool_mediator->IsAccessibilityEnabled()) {
+    return;
+  }
+
+  Json::Value msg(Json::ValueType::objectValue);
+  msg["method"] = "Accessibility.loadComplete";
+  msg["params"]["root"] = AccessibilityTreeHelper::BuildAXNode(element_root_);
+  devtool_mediator->RunOnDevToolThread(
+      [devtool_mediator, msg]() mutable {
+        devtool_mediator->SendCDPEvent(msg);
+      },
+      true);
 }
 
 void InspectorTasmExecutor::OnElementNodeAdded(lynx::tasm::Element* ptr) {
