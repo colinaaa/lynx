@@ -64,6 +64,43 @@ void AppendAXNodeIfNeeded(Element* element, std::set<int>& visited,
   nodes.append(AccessibilityTreeHelper::BuildAXNode(element));
 }
 
+void TrackRequestedAXNode(const Json::Value& node,
+                          std::set<int>& requested_ax_node_ids) {
+  if (!node.isObject() || !node.isMember("nodeId")) {
+    return;
+  }
+
+  const Json::Value& node_id = node["nodeId"];
+  if (node_id.isString()) {
+    requested_ax_node_ids.insert(std::atoi(node_id.asString().c_str()));
+    return;
+  }
+  if (node_id.isInt()) {
+    requested_ax_node_ids.insert(node_id.asInt());
+  }
+}
+
+void TrackRequestedAXNodes(const Json::Value& nodes,
+                           std::set<int>& requested_ax_node_ids) {
+  if (!nodes.isArray()) {
+    return;
+  }
+
+  for (const Json::Value& node : nodes) {
+    TrackRequestedAXNode(node, requested_ax_node_ids);
+  }
+}
+
+bool IsRequestedAXNode(Element* element,
+                       const std::set<int>& requested_ax_node_ids) {
+  if (!element) {
+    return false;
+  }
+
+  return requested_ax_node_ids.find(ElementInspector::NodeId(element)) !=
+         requested_ax_node_ids.end();
+}
+
 bool AXNodeMatchesQuery(const Json::Value& node, const Json::Value& params) {
   if (params.isMember("accessibleName") &&
       node["name"]["value"].asString() != params["accessibleName"].asString()) {
@@ -92,6 +129,26 @@ void AppendMatchingAXSubtree(Element* element, const Json::Value& params,
   for (Element* child : element->GetChildren()) {
     AppendMatchingAXSubtree(child, params, nodes);
   }
+}
+
+void SendAccessibilityNodesUpdatedIfNeeded(
+    const std::shared_ptr<LynxDevToolMediator>& devtool_mediator,
+    Element* element, const std::set<int>& requested_ax_node_ids) {
+  if (!element || !devtool_mediator->IsAccessibilityEnabled() ||
+      !IsRequestedAXNode(element, requested_ax_node_ids)) {
+    return;
+  }
+
+  Json::Value msg(Json::ValueType::objectValue);
+  Json::Value nodes(Json::ValueType::arrayValue);
+  nodes.append(AccessibilityTreeHelper::BuildAXNode(element));
+  msg["method"] = "Accessibility.nodesUpdated";
+  msg["params"]["nodes"] = nodes;
+  devtool_mediator->RunOnDevToolThread(
+      [devtool_mediator, msg]() mutable {
+        devtool_mediator->SendCDPEvent(msg);
+      },
+      true);
 }
 
 }  // namespace
@@ -136,6 +193,7 @@ void InspectorTasmExecutor::SendDOMEventMsg(const DomCdpEvent& event_name,
   CHECK_NULL_AND_LOG_RETURN(devtool_mediator, "devtool_mediator is null");
 
   Json::Value msg(Json::ValueType::objectValue);
+  Element* ax_updated_element = nullptr;
   msg["params"] = Json::ValueType::objectValue;
   if (event_name == DomCdpEvent::DOCUMENT_UPDATED) {
     msg["method"] = "DOM.documentUpdated";
@@ -157,6 +215,7 @@ void InspectorTasmExecutor::SendDOMEventMsg(const DomCdpEvent& event_name,
     }
     msg["params"]["value"] =
         ElementHelper::GetAttributesAsTextOfNode(ptr, name);
+    ax_updated_element = ptr;
   } else if (event_name == DomCdpEvent::CHILD_NODE_REMOVED) {
     msg["method"] = "DOM.childNodeRemoved";
     msg["params"]["parentNodeId"] = parentNodeId;
@@ -170,6 +229,8 @@ void InspectorTasmExecutor::SendDOMEventMsg(const DomCdpEvent& event_name,
         devtool_mediator->SendCDPEvent(msg);
       },
       true);
+  SendAccessibilityNodesUpdatedIfNeeded(devtool_mediator, ax_updated_element,
+                                        requested_ax_node_ids_);
 }
 
 void InspectorTasmExecutor::OnDocumentUpdated() {
@@ -632,6 +693,7 @@ void InspectorTasmExecutor::GetFullAXTree(
   }
 
   content["nodes"] = AccessibilityTreeHelper::BuildAXTree(element_root_, depth);
+  TrackRequestedAXNodes(content["nodes"], requested_ax_node_ids_);
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);
@@ -653,6 +715,7 @@ void InspectorTasmExecutor::GetAXNodeAndAncestors(
   }
 
   content["nodes"] = nodes;
+  TrackRequestedAXNodes(content["nodes"], requested_ax_node_ids_);
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);
@@ -675,6 +738,7 @@ void InspectorTasmExecutor::GetChildAXNodes(
   }
 
   content["nodes"] = nodes;
+  TrackRequestedAXNodes(content["nodes"], requested_ax_node_ids_);
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);
@@ -715,6 +779,7 @@ void InspectorTasmExecutor::GetPartialAXTree(
   }
 
   content["nodes"] = nodes;
+  TrackRequestedAXNodes(content["nodes"], requested_ax_node_ids_);
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);
@@ -727,6 +792,7 @@ void InspectorTasmExecutor::GetRootAXNode(
   Json::Value content(Json::ValueType::objectValue);
   if (element_root_) {
     content["node"] = AccessibilityTreeHelper::BuildAXNode(element_root_);
+    TrackRequestedAXNode(content["node"], requested_ax_node_ids_);
   }
   response["result"] = content;
   response["id"] = message["id"].asInt64();
@@ -755,6 +821,7 @@ void InspectorTasmExecutor::QueryAXTree(
 
   AppendMatchingAXSubtree(element, params, nodes);
   content["nodes"] = nodes;
+  TrackRequestedAXNodes(content["nodes"], requested_ax_node_ids_);
   response["result"] = content;
   response["id"] = message["id"].asInt64();
   sender->SendMessage("CDP", response);

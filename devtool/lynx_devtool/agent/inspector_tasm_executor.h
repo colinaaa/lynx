@@ -218,6 +218,7 @@ class InspectorTasmExecutor
   std::unordered_map<std::string, std::vector<int>> search_results_;
   lynx::devtool::InspectorStyleSheet origin_inline_style_;
   std::shared_ptr<DevToolPlatformFacade> devtool_platform_facade_;
+  std::set<int> requested_ax_node_ids_;
 
   std::set<std::string> css_used_selector_;
 
